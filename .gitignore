@@ -1,0 +1,16 @@
+# 데이터 (용량 크므로 Git 제외)
+data/player_images/
+data/player_images_high/
+data/embeddings/
+*.onnx
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
