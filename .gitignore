@@ -1,16 +1,26 @@
-# 데이터 (용량 크므로 Git 제외)
+# === Data (large files) ===
 data/player_images/
 data/player_images_high/
 data/embeddings/
 *.onnx
+browser_models/
 
-# Python
-.venv/
+# === Python ===
+python/.venv/
+python/models/
 __pycache__/
 *.pyc
 
-# Jupyter
+# === Jupyter ===
 .ipynb_checkpoints/
 
-# macOS
+# === Web ===
+web/node_modules/
+web/dist/
+web/.vite/
+web/public/models
+web/public/data
+web/public/images/players
+
+# === OS ===
 .DS_Store
