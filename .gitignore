@@ -1,7 +1,9 @@
 # === Data (large files) ===
 data/player_images/
 data/player_images_high/
+data/player_images_gallery/
 data/embeddings/
+data/metadata/
 *.onnx
 browser_models/
 

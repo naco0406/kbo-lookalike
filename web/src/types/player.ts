@@ -21,6 +21,15 @@ export interface PlayerEmbeddings {
   players: Record<string, number[]>;
 }
 
+export interface GalleryEmbeddings {
+  version: string;
+  model: string;
+  dimension: number;
+  target_per_player: number;
+  count: number;
+  players: Record<string, { embeddings: number[][]; count: number }>;
+}
+
 export interface MatchResult {
   player: Player;
   similarity: number;
