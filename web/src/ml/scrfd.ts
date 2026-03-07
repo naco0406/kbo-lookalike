@@ -205,20 +205,19 @@ export const detectFaces = async (
 
   const kept = nms(allDetections, NMS_THRESH);
 
-  // Return largest face (by area)
   if (kept.length === 0) return [];
 
+  // 면적 큰 순 정렬 — 파이프라인은 [0]만 사용, 카메라는 전체 활용
   kept.sort((a, b) => {
     const areaA = (a.bbox[2] - a.bbox[0]) * (a.bbox[3] - a.bbox[1]);
     const areaB = (b.bbox[2] - b.bbox[0]) * (b.bbox[3] - b.bbox[1]);
     return areaB - areaA;
   });
 
-  console.debug('[SCRFD] Detected face:', {
+  console.debug('[SCRFD] Detected faces:', kept.length, {
     bbox: kept[0].bbox,
     score: kept[0].score,
-    landmarks: kept[0].landmarks,
   });
 
-  return [kept[0]];
+  return kept;
 };
