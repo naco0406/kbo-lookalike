@@ -23,6 +23,11 @@ export const ResultPage: FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
+  const handleReset = useCallback(() => {
+    dispatch({ type: 'RESET' });
+    navigate('/');
+  }, [dispatch, navigate]);
+
   if (state.phase !== 'result') {
     return <Navigate to="/" replace />;
   }
@@ -30,11 +35,6 @@ export const ResultPage: FC = () => {
   const { matches, previewUrl } = state;
   const top = matches[0];
   const topPercent = Math.round(top.similarity * 1000) / 10;
-
-  const handleReset = useCallback(() => {
-    dispatch({ type: 'RESET' });
-    navigate('/');
-  }, [dispatch, navigate]);
 
   return (
     <ResultContent
