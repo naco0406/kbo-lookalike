@@ -1,122 +1,166 @@
 import type { FC } from 'react';
-import { useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { PipelineStep } from '@/ml/pipeline';
+import type { PositionClassification, TeamClassification, MatchResult } from '@/types/player';
+import { StageFaceDetection } from './stage-face-detection';
+import { StageAiAnalysis } from './stage-ai-analysis';
+import { StagePosition } from './stage-position';
+import { StageTeam } from './stage-team';
+import { StageMatching } from './stage-matching';
 import { cn } from '@/lib/utils';
-import { Check, Loader2 } from 'lucide-react';
 
-interface Step {
-  label: string;
-  keys: PipelineStep[];
-}
+type Stage = 'loading' | 'face-detection' | 'ai-analysis' | 'position' | 'team' | 'matching';
 
-const STEPS: Step[] = [
-  { label: 'AI 모델 준비', keys: ['loading-models', 'loading-data'] },
-  { label: '얼굴 분석', keys: ['detecting-face', 'aligning-face', 'extracting-embedding'] },
-  { label: '닮은꼴 검색', keys: ['searching'] },
-];
-
-const STEP_ORDER: PipelineStep[] = [
-  'loading-models',
-  'loading-data',
-  'detecting-face',
-  'aligning-face',
-  'extracting-embedding',
-  'searching',
-];
-
-type Status = 'pending' | 'active' | 'completed';
-
-interface StepState {
-  label: string;
-  status: Status;
-  progress: number;
-}
-
-const getStepState = (step: Step, current: PipelineStep): StepState => {
-  if (current === 'done') return { label: step.label, status: 'completed', progress: 100 };
-
-  const idx = STEP_ORDER.indexOf(current);
-  const first = STEP_ORDER.indexOf(step.keys[0]);
-  const last = STEP_ORDER.indexOf(step.keys[step.keys.length - 1]);
-
-  if (idx > last) return { label: step.label, status: 'completed', progress: 100 };
-  if (idx >= first) {
-    const posInStep = idx - first;
-    const totalSubSteps = step.keys.length;
-    const progress = Math.round(((posInStep + 0.5) / totalSubSteps) * 100);
-    return { label: step.label, status: 'active', progress };
+const stepToStage = (step: PipelineStep): Stage => {
+  switch (step) {
+    case 'loading-models':
+    case 'loading-data':
+      return 'loading';
+    case 'detecting-face':
+    case 'cropping-face':
+      return 'face-detection';
+    case 'aligning-face':
+    case 'extracting-embedding':
+      return 'ai-analysis';
+    case 'classifying-position':
+      return 'position';
+    case 'classifying-team':
+    case 'checking-baseball-face':
+      return 'team';
+    case 'searching':
+      return 'matching';
+    default:
+      return 'loading';
   }
-  return { label: step.label, status: 'pending', progress: 0 };
 };
+
+const STAGE_ORDER: Stage[] = ['loading', 'face-detection', 'ai-analysis', 'position', 'team', 'matching'];
 
 interface ProcessingScreenProps {
   step: PipelineStep;
   previewUrl: string;
+  faceRect?: { x: number; y: number; width: number; height: number };
+  croppedFaceUrl?: string;
+  positionResult?: PositionClassification;
+  teamResult?: TeamClassification;
+  isBaseballFace?: boolean;
+  pendingMatches?: MatchResult[];
 }
 
-export const ProcessingScreen: FC<ProcessingScreenProps> = ({ step, previewUrl }) => {
-  const states = useMemo(() => STEPS.map((s) => getStepState(s, step)), [step]);
+export const ProcessingScreen: FC<ProcessingScreenProps> = ({
+  step,
+  previewUrl,
+  faceRect,
+  croppedFaceUrl,
+  positionResult,
+  teamResult,
+  isBaseballFace,
+  pendingMatches,
+}) => {
+  const currentStage = stepToStage(step);
+  const [displayedStage, setDisplayedStage] = useState<Stage>(currentStage);
+  const [transitioning, setTransitioning] = useState(false);
+  const prevStageRef = useRef<Stage>(currentStage);
+
+  // Stage 전환 애니메이션
+  useEffect(() => {
+    if (currentStage === prevStageRef.current) return;
+
+    const currentIdx = STAGE_ORDER.indexOf(currentStage);
+    const prevIdx = STAGE_ORDER.indexOf(prevStageRef.current);
+
+    // 진행 방향 전환만 허용 (backward skip 방지)
+    if (currentIdx <= prevIdx) {
+      prevStageRef.current = currentStage;
+      setDisplayedStage(currentStage);
+      return;
+    }
+
+    prevStageRef.current = currentStage;
+
+    // loading에서 face-detection으로 전환 시 즉시 전환
+    if (currentStage === 'face-detection' && displayedStage === 'loading') {
+      setDisplayedStage(currentStage);
+      return;
+    }
+
+    // fade-out → fade-in (450ms for smoother transition)
+    setTransitioning(true);
+    const timer = setTimeout(() => {
+      setDisplayedStage(currentStage);
+      setTransitioning(false);
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [currentStage, displayedStage]);
+
+  // Loading 단계: 간단한 로딩 표시
+  if (displayedStage === 'loading') {
+    return (
+      <div className="mx-auto flex w-full max-w-xs flex-col items-center gap-5 animate-in fade-in duration-300">
+        <div className="animate-processing-breathe h-28 w-28 overflow-hidden rounded-full shadow-lg sm:h-36 sm:w-36">
+          <img src={previewUrl} alt="준비 중" className="h-full w-full object-cover" />
+        </div>
+        <p className="text-muted-foreground text-sm">AI 모델을 준비하고 있어요...</p>
+      </div>
+    );
+  }
+
+  // 스테이지 진행률 (5개 가시 스테이지)
+  const visibleStages = STAGE_ORDER.slice(1); // loading 제외
+  const currentVisibleIdx = visibleStages.indexOf(displayedStage);
+  const progress = ((currentVisibleIdx + 1) / visibleStages.length) * 100;
 
   return (
-    <div className="mx-auto flex w-full max-w-[260px] flex-col items-center animate-in fade-in duration-300">
-      {/* 사진 + 링 애니메이션 */}
-      <div className="relative mb-10">
-        <div className="animate-processing-breathe h-32 w-32 overflow-hidden rounded-full shadow-xl sm:h-40 sm:w-40">
-          <img src={previewUrl} alt="분석 중" className="h-full w-full object-cover" />
+    <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-5">
+      {/* 프로그레스 바 — 미니멀 */}
+      <div className="w-full max-w-[200px]">
+        <div className="h-0.5 w-full overflow-hidden rounded-full bg-border">
+          <div
+            className="h-full rounded-full bg-foreground/60 transition-all duration-700 ease-out"
+            style={{ width: `${progress}%` }}
+          />
         </div>
-        {/* 회전하는 링 */}
-        <div
-          className="absolute -inset-2.5 animate-spin rounded-full border-2 border-transparent border-t-foreground/15"
-          style={{ animationDuration: '3s' }}
-        />
       </div>
 
-      {/* 단계 리스트 */}
-      <div className="w-full space-y-1">
-        {states.map((s, i) => (
-          <div
-            key={s.label}
-            className={cn(
-              'flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 transition-all duration-500',
-              s.status === 'active' && 'bg-card shadow-sm',
-            )}
-          >
-            {/* 아이콘 — 통일된 24px 컨테이너 */}
-            <div className="flex h-5 w-5 shrink-0 items-center justify-center">
-              {s.status === 'completed' ? (
-                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-foreground/10">
-                  <Check className="h-3 w-3 text-foreground" />
-                </div>
-              ) : s.status === 'active' ? (
-                <Loader2 className="h-4 w-4 animate-spin text-foreground" />
-              ) : (
-                <span className="text-muted-foreground/30 text-[11px] font-medium tabular-nums">{i + 1}</span>
-              )}
-            </div>
-
-            {/* 라벨 */}
-            <span
-              className={cn(
-                'text-[13px] transition-colors duration-300',
-                s.status === 'completed' && 'text-muted-foreground',
-                s.status === 'active' && 'font-medium text-foreground',
-                s.status === 'pending' && 'text-muted-foreground/40',
-              )}
-            >
-              {s.label}
-            </span>
-
-            {/* 진행 바 (active만) */}
-            {s.status === 'active' && (
-              <div className="ml-auto h-1 w-10 overflow-hidden rounded-full bg-border">
-                <div
-                  className="h-full rounded-full bg-foreground transition-[width] duration-700 ease-out"
-                  style={{ width: `${s.progress}%` }}
-                />
-              </div>
-            )}
-          </div>
-        ))}
+      {/* Stage Content — 고정 높이로 프로그레스바 위치 안정화 */}
+      <div className="flex min-h-[340px] w-full items-center justify-center sm:min-h-[380px]">
+        <div
+          className={cn(
+            'w-full transition-all duration-450',
+            transitioning ? 'animate-stage-exit' : 'animate-stage-enter',
+          )}
+        >
+        {displayedStage === 'face-detection' && (
+          <StageFaceDetection
+            previewUrl={previewUrl}
+            croppedFaceUrl={croppedFaceUrl}
+            faceRect={faceRect}
+          />
+        )}
+        {displayedStage === 'ai-analysis' && (
+          <StageAiAnalysis
+            croppedFaceUrl={croppedFaceUrl}
+            previewUrl={previewUrl}
+          />
+        )}
+        {displayedStage === 'position' && (
+          <StagePosition
+            croppedFaceUrl={croppedFaceUrl}
+            previewUrl={previewUrl}
+            positionResult={positionResult}
+          />
+        )}
+        {displayedStage === 'team' && (
+          <StageTeam
+            teamResult={teamResult}
+            isBaseballFace={isBaseballFace}
+          />
+        )}
+        {displayedStage === 'matching' && (
+          <StageMatching pendingMatches={pendingMatches} />
+        )}
+        </div>
       </div>
     </div>
   );

@@ -151,6 +151,211 @@
   animation: processing-breathe 2.4s ease-in-out infinite;
 }
 
+/* ── Processing Stage Animations ── */
+
+@keyframes scan-line {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+@keyframes focus-frame-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px 1px rgba(255,255,255,0.3); }
+  50% { opacity: 0.8; box-shadow: 0 0 16px 2px rgba(255,255,255,0.15); }
+}
+
+@keyframes orbit-dot {
+  0% {
+    transform: rotate(var(--start-angle, 0deg)) translateX(var(--orbit-r, 80px)) scale(0.7);
+    opacity: 0.5;
+  }
+  50% {
+    transform: rotate(calc(var(--start-angle, 0deg) + 180deg)) translateX(var(--orbit-r, 80px)) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(calc(var(--start-angle, 0deg) + 360deg)) translateX(var(--orbit-r, 80px)) scale(0.7);
+    opacity: 0.5;
+  }
+}
+
+@keyframes grid-highlight {
+  0%, 100% { opacity: 0.05; }
+  50% { opacity: 0.25; }
+}
+
+@keyframes equalizer-bar {
+  0%, 100% { transform: scaleY(var(--min-h, 0.3)); }
+  50% { transform: scaleY(var(--max-h, 1)); }
+}
+
+@keyframes position-alternate {
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+@keyframes stage-enter {
+  0% { opacity: 0; transform: translateY(12px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes stage-exit {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-8px) scale(0.98); }
+}
+
+@keyframes progress-ring {
+  0% { stroke-dashoffset: var(--circumference, 283); }
+}
+
+/* ── AI Analysis: Scanning Ring ── */
+@keyframes scan-ring-rotate {
+  0% { rotate: 0deg; }
+  100% { rotate: 360deg; }
+}
+
+@keyframes scan-ring-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* ── AI Analysis: Data Labels ── */
+@keyframes data-label-float {
+  0% { opacity: 0; transform: translateY(6px); }
+  15% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-6px); }
+}
+
+/* ── AI Analysis: Feature Circle Crop ── */
+@keyframes feature-circle-pop {
+  0% { opacity: 0; transform: scale(0.5); }
+  12% { opacity: 1; transform: scale(1.08); }
+  22% { opacity: 1; transform: scale(1); }
+  82% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.8); }
+}
+
+/* ── Matching Stage: Tile Grid ── */
+@keyframes tile-appear {
+  0% { opacity: 0; transform: scale(0.7); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes tile-disappear {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.5); }
+}
+
+@keyframes tile-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+@keyframes tile-hero-reveal {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.6); }
+}
+
+.animate-scan-line {
+  animation: scan-line 2.4s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-focus-frame {
+  animation: focus-frame-pulse 2s ease-in-out infinite;
+}
+
+.animate-orbit-dot {
+  animation: orbit-dot var(--orbit-duration, 4s) linear infinite;
+  will-change: transform;
+}
+
+.animate-grid-cell {
+  animation: grid-highlight 1.6s ease-in-out var(--delay, 0s) infinite;
+}
+
+.animate-equalizer {
+  animation: equalizer-bar var(--eq-duration, 1s) ease-in-out var(--delay, 0s) infinite;
+  transform-origin: bottom;
+  will-change: transform;
+}
+
+.animate-position-alt {
+  animation: position-alternate 1.6s ease-in-out infinite;
+}
+
+.animate-position-alt-reverse {
+  animation: position-alternate 1.6s ease-in-out 0.8s infinite;
+}
+
+.animate-scan-ring {
+  animation: scan-ring-rotate 2.5s linear infinite, scan-ring-pulse 2s ease-in-out infinite;
+  will-change: rotate;
+}
+
+.animate-data-label {
+  animation: data-label-float 1.6s ease-in-out both;
+}
+
+.animate-feature-circle {
+  animation: feature-circle-pop 1.6s ease-out both;
+}
+
+.animate-tile-appear {
+  animation: tile-appear 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-tile-disappear {
+  animation: tile-disappear 0.4s ease-in both;
+}
+
+.animate-tile-pulse {
+  animation: tile-pulse 0.6s ease-in-out infinite;
+}
+
+.animate-tile-hero {
+  animation: tile-hero-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-stage-enter {
+  animation: stage-enter 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-stage-exit {
+  animation: stage-exit 0.45s ease-in both;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-scan-line,
+  .animate-focus-frame,
+  .animate-orbit-dot,
+  .animate-grid-cell,
+  .animate-equalizer,
+  .animate-position-alt,
+  .animate-position-alt-reverse,
+  .animate-processing-breathe,
+  .animate-scan-ring,
+  .animate-tile-pulse {
+    animation: none !important;
+  }
+
+  .animate-stage-enter,
+  .animate-stage-exit,
+  .animate-reveal-up,
+  .animate-scale-reveal,
+  .animate-data-label,
+  .animate-feature-circle,
+  .animate-tile-appear,
+  .animate-tile-disappear,
+  .animate-tile-hero {
+    animation-duration: 0.01ms !important;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
