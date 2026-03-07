@@ -21,7 +21,9 @@ export const AppStateProvider: FC<AppStateProviderProps> = ({ children }) => {
       return {
         phase: 'result' as const,
         previewUrl: persisted.previewUrl,
+        croppedFaceUrl: persisted.croppedFaceUrl,
         matches: persisted.matches,
+        classification: persisted.classification,
       };
     }
     return INITIAL_STATE;
@@ -30,7 +32,12 @@ export const AppStateProvider: FC<AppStateProviderProps> = ({ children }) => {
   // result 상태 변경 시 sessionStorage에 저장
   useEffect(() => {
     if (state.phase === 'result') {
-      persistResult({ previewUrl: state.previewUrl, matches: state.matches });
+      persistResult({
+        previewUrl: state.previewUrl,
+        croppedFaceUrl: state.croppedFaceUrl,
+        matches: state.matches,
+        classification: state.classification,
+      });
     } else if (state.phase === 'idle') {
       clearPersistedResult();
     }

@@ -1,10 +1,12 @@
-import type { MatchResult } from '@/types/player';
+import type { MatchResult, Classification } from '@/types/player';
 
 const STORAGE_KEY = 'kbo-lookalike-result';
 
 interface PersistedResult {
   previewUrl: string;
+  croppedFaceUrl?: string;
   matches: MatchResult[];
+  classification?: Classification;
 }
 
 export const persistResult = (data: PersistedResult): void => {

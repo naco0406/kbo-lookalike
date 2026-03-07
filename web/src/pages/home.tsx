@@ -5,7 +5,7 @@ import { ImageUpload } from '@/components/upload/image-upload';
 import { ProcessingScreen } from '@/components/processing/processing-screen';
 import { Button } from '@/components/ui/button';
 import { useFacePipeline } from '@/hooks/use-face-pipeline';
-import { AlertTriangle, RefreshCw, ImagePlus, Sparkles, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, RefreshCw, ImagePlus, Search, ShieldCheck } from 'lucide-react';
 import type { ErrorType } from '@/types/app-state';
 
 const ERROR_CONFIG: Record<ErrorType, { title: string; tips: string[] }> = {
@@ -25,7 +25,7 @@ const ERROR_CONFIG: Record<ErrorType, { title: string; tips: string[] }> = {
 
 export const HomePage: FC = () => {
   const navigate = useNavigate();
-  const { state, run, selectImage, reset } = useFacePipeline();
+  const { state, run, selectImage, selectAndRun, reset } = useFacePipeline();
 
   useEffect(() => {
     if (state.phase === 'result') {
@@ -44,7 +44,16 @@ export const HomePage: FC = () => {
   if (state.phase === 'processing') {
     return (
       <div className="flex flex-1 items-center justify-center px-5">
-        <ProcessingScreen step={state.step} previewUrl={state.previewUrl} />
+        <ProcessingScreen
+          step={state.step}
+          previewUrl={state.previewUrl}
+          faceRect={state.faceRect}
+          croppedFaceUrl={state.croppedFaceUrl}
+          positionResult={state.positionResult}
+          teamResult={state.teamResult}
+          isBaseballFace={state.isBaseballFace}
+          pendingMatches={state.pendingMatches}
+        />
       </div>
     );
   }
@@ -111,8 +120,8 @@ export const HomePage: FC = () => {
               onClick={run}
               className="h-11 flex-1 text-[14px] active:scale-[0.97]"
             >
-              <Sparkles className="mr-1.5 h-4 w-4" />
-              분석 시작
+              <Search className="mr-1.5 h-4 w-4" />
+              닮은꼴 찾기
             </Button>
             <Button
               onClick={reset}
@@ -155,7 +164,7 @@ export const HomePage: FC = () => {
         className="w-full max-w-sm animate-reveal-up"
         style={{ animationDelay: '200ms' }}
       >
-        <ImageUpload onImageSelect={selectImage} />
+        <ImageUpload onImageSelect={selectImage} onCameraConfirm={selectAndRun} />
       </div>
 
       {/* Trust badge */}
