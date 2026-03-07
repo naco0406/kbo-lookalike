@@ -1,13 +1,23 @@
 import type { FC } from 'react';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
+import { toast } from 'sonner';
 import { useAppState, useAppDispatch } from '@/context/app-state-context';
 import { MatchCard } from '@/components/result/match-card';
 import { PlayerImage } from '@/components/result/player-image';
+import { ImageLightbox } from '@/components/result/image-lightbox';
 import { Button } from '@/components/ui/button';
 import { useAnimatedNumber } from '@/hooks/use-animated-number';
-import { RotateCcw, Share2 } from 'lucide-react';
+import { generateShareCard } from '@/lib/share-card';
+import { RotateCcw, Loader2, Download, Copy } from 'lucide-react';
 import type { MatchResult } from '@/types/player';
+
+interface LightboxState {
+  src: string;
+  alt: string;
+  label?: string;
+  sublabel?: string;
+}
 
 export const ResultPage: FC = () => {
   const state = useAppState();
@@ -27,26 +37,13 @@ export const ResultPage: FC = () => {
     navigate('/');
   }, [dispatch, navigate]);
 
-  const handleShare = useCallback(async () => {
-    const text = `나는 ${top.player.name} 선수와 ${topPercent}% 닮았대요! KBO 닮은꼴 찾기`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'KBO 닮은꼴', text });
-      } catch {
-        // user cancelled
-      }
-    } else {
-      await navigator.clipboard.writeText(text);
-    }
-  }, [top.player.name, topPercent]);
-
   return (
     <ResultContent
       matches={matches}
       previewUrl={previewUrl}
       topPercent={topPercent}
+      top={top}
       onReset={handleReset}
-      onShare={handleShare}
     />
   );
 };
@@ -55,19 +52,71 @@ interface ResultContentProps {
   matches: MatchResult[];
   previewUrl: string;
   topPercent: number;
+  top: MatchResult;
   onReset: () => void;
-  onShare: () => void;
 }
 
 const ResultContent: FC<ResultContentProps> = ({
   matches,
   previewUrl,
   topPercent,
+  top,
   onReset,
-  onShare,
 }) => {
   const animatedPercent = useAnimatedNumber(topPercent, 1200);
-  const top = matches[0];
+  const [isSharing, setIsSharing] = useState(false);
+  const [lightbox, setLightbox] = useState<LightboxState | null>(null);
+
+  const openLightbox = useCallback(
+    (src: string, alt: string, label?: string, sublabel?: string) => {
+      setLightbox({ src, alt, label, sublabel });
+    },
+    [],
+  );
+
+  const handleShare = useCallback(async () => {
+    const top3 = matches.slice(0, 3);
+    const lines = [
+      '⚾ KBO 닮은꼴 결과',
+      '',
+      ...top3.map((m, i) => {
+        const p = Math.round(m.similarity * 100);
+        return `${i + 1}위 ${m.player.name} (${p}%) — ${m.player.team}`;
+      }),
+      '',
+      '나도 닮은꼴 찾아보기 👉',
+      'https://lookalike.naco.kr/',
+    ];
+    const text = lines.join('\n');
+
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('결과가 클립보드에 복사되었습니다');
+    } catch {
+      toast.error('복사에 실패했습니다');
+    }
+  }, [matches]);
+
+  const handleSave = useCallback(async () => {
+    setIsSharing(true);
+    try {
+      const blob = await generateShareCard({
+        userPhotoUrl: previewUrl,
+        matches,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'kbo-lookalike.png';
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('이미지가 저장되었습니다');
+    } catch {
+      toast.error('이미지 저장에 실패했습니다');
+    } finally {
+      setIsSharing(false);
+    }
+  }, [matches, previewUrl]);
 
   return (
     <div className="container mx-auto max-w-lg px-4 py-6 sm:py-8">
@@ -75,9 +124,12 @@ const ResultContent: FC<ResultContentProps> = ({
       <div className="mb-8 flex flex-col items-center">
         {/* Photos */}
         <div className="mb-5 flex items-center gap-4 sm:gap-6">
-          <div className="animate-scale-reveal h-[5.5rem] w-[5.5rem] overflow-hidden rounded-full ring-2 ring-border sm:h-28 sm:w-28">
+          <button
+            onClick={() => openLightbox(previewUrl, '내 사진', '내 사진')}
+            className="animate-scale-reveal h-[5.5rem] w-[5.5rem] cursor-pointer overflow-hidden rounded-full ring-2 ring-border transition-transform hover:scale-105 active:scale-95 sm:h-28 sm:w-28"
+          >
             <img src={previewUrl} alt="내 사진" className="h-full w-full object-cover" />
-          </div>
+          </button>
 
           {/* Percentage */}
           <div
@@ -91,8 +143,16 @@ const ResultContent: FC<ResultContentProps> = ({
             <p className="text-muted-foreground text-[11px] tracking-wider">MATCH</p>
           </div>
 
-          <div
-            className="animate-scale-reveal h-[5.5rem] w-[5.5rem] overflow-hidden rounded-full ring-2 ring-foreground sm:h-28 sm:w-28"
+          <button
+            onClick={() =>
+              openLightbox(
+                top.player.imageUrl,
+                top.player.name,
+                top.player.name,
+                `${top.player.team} · ${top.player.position}`,
+              )
+            }
+            className="animate-scale-reveal h-[5.5rem] w-[5.5rem] cursor-pointer overflow-hidden rounded-full ring-2 ring-foreground transition-transform hover:scale-105 active:scale-95 sm:h-28 sm:w-28"
             style={{ animationDelay: '150ms' }}
           >
             <PlayerImage
@@ -100,7 +160,7 @@ const ResultContent: FC<ResultContentProps> = ({
               alt={top.player.name}
               className="h-full w-full"
             />
-          </div>
+          </button>
         </div>
 
         {/* Name & info */}
@@ -123,13 +183,27 @@ const ResultContent: FC<ResultContentProps> = ({
         style={{ animationDelay: '600ms' }}
       >
         <Button
-          onClick={onShare}
+          onClick={handleShare}
           variant="outline"
           className="flex-1 active:scale-[0.97]"
           size="lg"
         >
-          <Share2 className="mr-2 h-4 w-4" />
+          <Copy className="mr-2 h-4 w-4" />
           공유하기
+        </Button>
+        <Button
+          onClick={handleSave}
+          disabled={isSharing}
+          variant="outline"
+          className="flex-1 active:scale-[0.97]"
+          size="lg"
+        >
+          {isSharing ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="mr-2 h-4 w-4" />
+          )}
+          저장하기
         </Button>
         <Button onClick={onReset} className="flex-1 active:scale-[0.97]" size="lg">
           <RotateCcw className="mr-2 h-4 w-4" />
@@ -152,11 +226,35 @@ const ResultContent: FC<ResultContentProps> = ({
               className="animate-reveal-up"
               style={{ animationDelay: `${800 + i * 80}ms` }}
             >
-              <MatchCard match={m} rank={i + 1} />
+              <MatchCard
+                match={m}
+                rank={i + 1}
+                userPhotoUrl={previewUrl}
+                onImageClick={() =>
+                  openLightbox(
+                    m.player.imageUrl,
+                    m.player.name,
+                    m.player.name,
+                    `${m.player.team} · ${m.player.position}`,
+                  )
+                }
+              />
             </div>
           ))}
         </div>
       </div>
+
+      {/* Lightbox */}
+      <ImageLightbox
+        open={lightbox !== null}
+        onOpenChange={(open) => {
+          if (!open) setLightbox(null);
+        }}
+        src={lightbox?.src ?? ''}
+        alt={lightbox?.alt ?? ''}
+        label={lightbox?.label}
+        sublabel={lightbox?.sublabel}
+      />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 import { Outlet, Link } from 'react-router';
 import { AppStateProvider } from '@/context/app-state-context';
+import { Toaster } from '@/components/ui/sonner';
 
 export const Layout: FC = () => {
   return (
@@ -23,6 +24,7 @@ export const Layout: FC = () => {
             <p>모든 분석은 브라우저에서 처리되며, 사진은 서버로 전송되지 않습니다.</p>
           </div>
         </footer>
+        <Toaster position="bottom-center" richColors closeButton />
       </div>
     </AppStateProvider>
   );

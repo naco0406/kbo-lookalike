@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 import { useCallback, useRef, useState } from 'react';
 import { Camera, ImagePlus, X, Circle } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { blobUrlToDataUrl } from '@/lib/image-utils';
 
@@ -56,7 +57,7 @@ export const ImageUpload: FC<ImageUploadProps> = ({ onImageSelect }) => {
         }
       });
     } catch {
-      alert('카메라 접근이 거부되었습니다.');
+      toast.error('카메라 접근이 거부되었습니다');
     }
   }, []);
 
