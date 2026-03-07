@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 
-export const useAnimatedNumber = (target: number, duration = 800): number => {
+export const useAnimatedNumber = (target: number, duration = 800, decimals = 0): number => {
   const [current, setCurrent] = useState(0);
   const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number>(0);
+  const factor = Math.pow(10, decimals);
 
   useEffect(() => {
     startTimeRef.current = null;
@@ -15,7 +16,7 @@ export const useAnimatedNumber = (target: number, duration = 800): number => {
 
       // ease-out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
-      setCurrent(Math.round(eased * target));
+      setCurrent(Math.round(eased * target * factor) / factor);
 
       if (progress < 1) {
         rafRef.current = requestAnimationFrame(animate);
@@ -24,7 +25,7 @@ export const useAnimatedNumber = (target: number, duration = 800): number => {
 
     rafRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [target, duration]);
+  }, [target, duration, factor]);
 
   return current;
 };

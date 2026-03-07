@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useCallback, useRef, useState } from 'react';
-import { Camera, ImagePlus, X, Circle } from 'lucide-react';
+import { Camera, ImagePlus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { blobUrlToDataUrl } from '@/lib/image-utils';
@@ -86,8 +86,8 @@ export const ImageUpload: FC<ImageUploadProps> = ({ onImageSelect }) => {
   // ── Camera Mode ──
   if (cameraActive) {
     return (
-      <div className="mx-auto flex max-w-sm flex-col items-center gap-4 animate-in fade-in duration-200">
-        <div className="relative aspect-square w-full overflow-hidden rounded-3xl bg-black shadow-xl">
+      <div className="mx-auto flex max-w-sm flex-col items-center gap-4 animate-scale-reveal">
+        <div className="relative aspect-[3/4] w-full max-w-[300px] overflow-hidden rounded-3xl bg-black shadow-2xl">
           <video
             ref={videoRef}
             autoPlay
@@ -97,23 +97,23 @@ export const ImageUpload: FC<ImageUploadProps> = ({ onImageSelect }) => {
           />
           {/* Face guide */}
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="h-[60%] w-[45%] rounded-full border-2 border-white/25" />
+            <div className="h-[55%] w-[50%] rounded-full border-2 border-white/20" />
           </div>
           {/* Bottom controls overlay */}
-          <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-6 bg-gradient-to-t from-black/60 to-transparent px-6 pb-6 pt-16">
+          <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-6 bg-gradient-to-t from-black/70 via-black/20 to-transparent px-6 pb-6 pt-20">
             <button
               onClick={stopCamera}
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition-transform active:scale-90"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition-all active:scale-90"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4.5 w-4.5" />
             </button>
             <button
               onClick={capturePhoto}
-              className="flex h-18 w-18 items-center justify-center rounded-full border-4 border-white bg-white/20 text-white backdrop-blur-sm transition-transform active:scale-90"
+              className="flex h-[72px] w-[72px] items-center justify-center rounded-full border-[3px] border-white transition-all active:scale-90"
             >
-              <Circle className="h-12 w-12 fill-white text-white" />
+              <div className="h-[58px] w-[58px] rounded-full bg-white" />
             </button>
-            <div className="h-12 w-12" /> {/* spacer for centering */}
+            <div className="h-11 w-11" /> {/* spacer for centering */}
           </div>
         </div>
       </div>
@@ -123,51 +123,56 @@ export const ImageUpload: FC<ImageUploadProps> = ({ onImageSelect }) => {
   // ── Upload Mode ──
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-3">
-      {/* Two action cards */}
-      <div className="grid w-full grid-cols-2 gap-3">
-        {/* Camera card */}
-        <button
-          onClick={startCamera}
-          className="group flex flex-col items-center gap-3 rounded-2xl border-2 border-transparent bg-foreground px-4 py-8 text-background transition-all active:scale-[0.97] sm:py-10"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background/15 transition-transform group-active:scale-90">
-            <Camera className="h-5 w-5" />
-          </div>
-          <p className="text-sm font-semibold">카메라로 촬영</p>
-        </button>
+      {/* Primary CTA — 카메라 */}
+      <button
+        onClick={startCamera}
+        className="group flex w-full items-center gap-4 rounded-2xl bg-foreground px-5 py-4 text-background transition-all active:scale-[0.98]"
+      >
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-background/15">
+          <Camera className="h-5 w-5" />
+        </div>
+        <div className="text-left">
+          <p className="text-[15px] font-semibold">카메라로 촬영</p>
+          <p className="mt-0.5 text-xs opacity-60">셀카 한 장이면 충분해요</p>
+        </div>
+      </button>
 
-        {/* Album card */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
+      {/* Secondary — 앨범 */}
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        className={cn(
+          'group flex w-full items-center gap-4 rounded-2xl border px-5 py-4 transition-all active:scale-[0.98]',
+          isDragOver
+            ? 'border-foreground bg-foreground/5'
+            : 'border-border bg-card hover:border-foreground/20',
+        )}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragOver(true);
+        }}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={handleDrop}
+      >
+        <div
           className={cn(
-            'group flex flex-col items-center gap-3 rounded-2xl border-2 px-4 py-8 transition-all active:scale-[0.97] sm:py-10',
-            isDragOver
-              ? 'border-foreground bg-foreground/5'
-              : 'border-border bg-card hover:border-foreground/20',
+            'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors',
+            isDragOver ? 'bg-foreground/10' : 'bg-muted',
           )}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragOver(true);
-          }}
-          onDragLeave={() => setIsDragOver(false)}
-          onDrop={handleDrop}
         >
-          <div
+          <ImagePlus
             className={cn(
-              'flex h-12 w-12 items-center justify-center rounded-full transition-transform group-active:scale-90',
-              isDragOver ? 'bg-foreground/10' : 'bg-muted',
+              'h-5 w-5 transition-colors',
+              isDragOver ? 'text-foreground' : 'text-muted-foreground',
             )}
-          >
-            <ImagePlus
-              className={cn(
-                'h-5 w-5 transition-colors',
-                isDragOver ? 'text-foreground' : 'text-muted-foreground',
-              )}
-            />
-          </div>
-          <p className="text-sm font-semibold">앨범에서 선택</p>
-        </button>
-      </div>
+          />
+        </div>
+        <div className="text-left">
+          <p className="text-[15px] font-semibold">앨범에서 선택</p>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            {isDragOver ? '여기에 놓으세요' : '갤러리에서 사진을 골라보세요'}
+          </p>
+        </div>
+      </button>
 
       <input
         ref={fileInputRef}

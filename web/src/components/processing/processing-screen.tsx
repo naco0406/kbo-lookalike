@@ -2,7 +2,7 @@ import type { FC } from 'react';
 import { useMemo } from 'react';
 import type { PipelineStep } from '@/ml/pipeline';
 import { cn } from '@/lib/utils';
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 
 interface Step {
   label: string;
@@ -29,7 +29,7 @@ type Status = 'pending' | 'active' | 'completed';
 interface StepState {
   label: string;
   status: Status;
-  progress: number; // 0–100 within this step
+  progress: number;
 }
 
 const getStepState = (step: Step, current: PipelineStep): StepState => {
@@ -41,7 +41,6 @@ const getStepState = (step: Step, current: PipelineStep): StepState => {
 
   if (idx > last) return { label: step.label, status: 'completed', progress: 100 };
   if (idx >= first) {
-    // 이 단계 내에서 몇 번째 sub-step인지 계산
     const posInStep = idx - first;
     const totalSubSteps = step.keys.length;
     const progress = Math.round(((posInStep + 0.5) / totalSubSteps) * 100);
@@ -59,48 +58,63 @@ export const ProcessingScreen: FC<ProcessingScreenProps> = ({ step, previewUrl }
   const states = useMemo(() => STEPS.map((s) => getStepState(s, step)), [step]);
 
   return (
-    <div className="mx-auto flex w-full max-w-xs flex-col items-center pt-6 sm:pt-10 animate-in fade-in duration-300">
-      {/* Photo */}
-      <div className="animate-processing-breathe mb-8 h-40 w-40 overflow-hidden rounded-full shadow-xl sm:mb-10 sm:h-48 sm:w-48">
-        <img src={previewUrl} alt="분석 중" className="h-full w-full object-cover" />
+    <div className="mx-auto flex w-full max-w-[260px] flex-col items-center animate-in fade-in duration-300">
+      {/* 사진 + 링 애니메이션 */}
+      <div className="relative mb-10">
+        <div className="animate-processing-breathe h-32 w-32 overflow-hidden rounded-full shadow-xl sm:h-40 sm:w-40">
+          <img src={previewUrl} alt="분석 중" className="h-full w-full object-cover" />
+        </div>
+        {/* 회전하는 링 */}
+        <div
+          className="absolute -inset-2.5 animate-spin rounded-full border-2 border-transparent border-t-foreground/15"
+          style={{ animationDuration: '3s' }}
+        />
       </div>
 
-      {/* Step list */}
-      <div className="w-full space-y-4">
-        {states.map((s) => (
-          <div key={s.label} className="transition-all duration-500">
-            {/* Label row */}
-            <div
-              className={cn(
-                'mb-1.5 flex items-center justify-between text-sm',
-                s.status === 'completed' && 'text-muted-foreground',
-                s.status === 'active' && 'text-foreground',
-                s.status === 'pending' && 'text-muted-foreground/30',
+      {/* 단계 리스트 */}
+      <div className="w-full space-y-1">
+        {states.map((s, i) => (
+          <div
+            key={s.label}
+            className={cn(
+              'flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 transition-all duration-500',
+              s.status === 'active' && 'bg-card shadow-sm',
+            )}
+          >
+            {/* 아이콘 — 통일된 24px 컨테이너 */}
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+              {s.status === 'completed' ? (
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-foreground/10">
+                  <Check className="h-3 w-3 text-foreground" />
+                </div>
+              ) : s.status === 'active' ? (
+                <Loader2 className="h-4 w-4 animate-spin text-foreground" />
+              ) : (
+                <span className="text-muted-foreground/30 text-[11px] font-medium tabular-nums">{i + 1}</span>
               )}
-            >
-              <span className={cn(s.status === 'active' && 'font-medium')}>
-                {s.label}
-              </span>
-              {s.status === 'completed' && <Check className="h-3.5 w-3.5" />}
             </div>
 
-            {/* Per-step progress bar */}
-            <div
+            {/* 라벨 */}
+            <span
               className={cn(
-                'h-[3px] w-full overflow-hidden rounded-full transition-colors duration-500',
-                s.status === 'pending' ? 'bg-border/50' : 'bg-border',
+                'text-[13px] transition-colors duration-300',
+                s.status === 'completed' && 'text-muted-foreground',
+                s.status === 'active' && 'font-medium text-foreground',
+                s.status === 'pending' && 'text-muted-foreground/40',
               )}
             >
-              <div
-                className={cn(
-                  'h-full rounded-full transition-[width] duration-700 ease-out',
-                  s.status === 'completed' && 'bg-foreground/30',
-                  s.status === 'active' && 'bg-foreground',
-                  s.status === 'pending' && 'bg-transparent',
-                )}
-                style={{ width: `${s.progress}%` }}
-              />
-            </div>
+              {s.label}
+            </span>
+
+            {/* 진행 바 (active만) */}
+            {s.status === 'active' && (
+              <div className="ml-auto h-1 w-10 overflow-hidden rounded-full bg-border">
+                <div
+                  className="h-full rounded-full bg-foreground transition-[width] duration-700 ease-out"
+                  style={{ width: `${s.progress}%` }}
+                />
+              </div>
+            )}
           </div>
         ))}
       </div>

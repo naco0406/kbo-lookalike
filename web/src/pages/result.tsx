@@ -6,7 +6,6 @@ import { useAppState, useAppDispatch } from '@/context/app-state-context';
 import { MatchCard } from '@/components/result/match-card';
 import { PlayerImage } from '@/components/result/player-image';
 import { ImageLightbox } from '@/components/result/image-lightbox';
-import { Button } from '@/components/ui/button';
 import { useAnimatedNumber } from '@/hooks/use-animated-number';
 import { generateShareCard } from '@/lib/share-card';
 import { RotateCcw, Loader2, Download, Copy } from 'lucide-react';
@@ -30,7 +29,7 @@ export const ResultPage: FC = () => {
 
   const { matches, previewUrl } = state;
   const top = matches[0];
-  const topPercent = Math.round(top.similarity * 100);
+  const topPercent = Math.round(top.similarity * 1000) / 10;
 
   const handleReset = useCallback(() => {
     dispatch({ type: 'RESET' });
@@ -63,7 +62,7 @@ const ResultContent: FC<ResultContentProps> = ({
   top,
   onReset,
 }) => {
-  const animatedPercent = useAnimatedNumber(topPercent, 1200);
+  const animatedPercent = useAnimatedNumber(topPercent, 1200, 1);
   const [isSharing, setIsSharing] = useState(false);
   const [lightbox, setLightbox] = useState<LightboxState | null>(null);
 
@@ -80,7 +79,7 @@ const ResultContent: FC<ResultContentProps> = ({
       '⚾ KBO 닮은꼴 결과',
       '',
       ...top3.map((m, i) => {
-        const p = Math.round(m.similarity * 100);
+        const p = (Math.round(m.similarity * 1000) / 10).toFixed(1);
         return `${i + 1}위 ${m.player.name} (${p}%) — ${m.player.team}`;
       }),
       '',
@@ -119,112 +118,120 @@ const ResultContent: FC<ResultContentProps> = ({
   }, [matches, previewUrl]);
 
   return (
-    <div className="container mx-auto max-w-lg px-4 py-6 sm:py-8">
-      {/* Hero comparison */}
-      <div className="mb-8 flex flex-col items-center">
-        {/* Photos */}
-        <div className="mb-5 flex items-center gap-4 sm:gap-6">
-          <button
-            onClick={() => openLightbox(previewUrl, '내 사진', '내 사진')}
-            className="animate-scale-reveal h-[5.5rem] w-[5.5rem] cursor-pointer overflow-hidden rounded-full ring-2 ring-border transition-transform hover:scale-105 active:scale-95 sm:h-28 sm:w-28"
-          >
-            <img src={previewUrl} alt="내 사진" className="h-full w-full object-cover" />
-          </button>
+    <div className="container mx-auto max-w-lg px-5 pb-12">
+      {/* ── Hero 비교 섹션 ── */}
+      <div className="mb-8 flex flex-col items-center pt-2">
+        {/* 사진 비교 — 3-column grid로 정렬 */}
+        <div className="mb-5 grid grid-cols-[1fr_auto_1fr] items-center gap-4 sm:gap-6">
+          {/* 유저 사진 */}
+          <div className="flex flex-col items-center gap-2 animate-scale-reveal">
+            <button
+              onClick={() => openLightbox(previewUrl, '내 사진', '내 사진')}
+              className="h-24 w-24 cursor-pointer overflow-hidden rounded-2xl ring-2 ring-border transition-transform active:scale-95 sm:h-28 sm:w-28"
+            >
+              <img src={previewUrl} alt="내 사진" className="h-full w-full object-cover" />
+            </button>
+            <span className="text-muted-foreground text-[11px]">나</span>
+          </div>
 
-          {/* Percentage */}
+          {/* 매칭 퍼센트 — 중앙 */}
           <div
             className="flex flex-col items-center animate-reveal-up"
             style={{ animationDelay: '300ms' }}
           >
-            <p className="text-4xl font-bold tabular-nums tracking-tight sm:text-5xl">
-              {animatedPercent}
+            <p className="text-[2.75rem] font-extrabold tabular-nums leading-none tracking-tighter sm:text-[3.25rem]">
+              {animatedPercent.toFixed(1)}
               <span className="text-2xl sm:text-3xl">%</span>
             </p>
-            <p className="text-muted-foreground text-[11px] tracking-wider">MATCH</p>
+            <span className="text-muted-foreground mt-1 text-[10px] font-medium tracking-widest">MATCH</span>
           </div>
 
-          <button
-            onClick={() =>
-              openLightbox(
-                top.player.imageUrl,
-                top.player.name,
-                top.player.name,
-                `${top.player.team} · ${top.player.position}`,
-              )
-            }
-            className="animate-scale-reveal h-[5.5rem] w-[5.5rem] cursor-pointer overflow-hidden rounded-full ring-2 ring-foreground transition-transform hover:scale-105 active:scale-95 sm:h-28 sm:w-28"
+          {/* 선수 사진 */}
+          <div
+            className="flex flex-col items-center gap-2 animate-scale-reveal"
             style={{ animationDelay: '150ms' }}
           >
-            <PlayerImage
-              src={top.player.imageUrl}
-              alt={top.player.name}
-              className="h-full w-full"
-            />
-          </button>
+            <button
+              onClick={() =>
+                openLightbox(
+                  top.player.imageUrl,
+                  top.player.name,
+                  top.player.name,
+                  `${top.player.team} · ${top.player.position}`,
+                )
+              }
+              className="h-24 w-24 cursor-pointer overflow-hidden rounded-2xl ring-2 ring-foreground/20 transition-transform active:scale-95 sm:h-28 sm:w-28"
+            >
+              <PlayerImage
+                src={top.player.imageUrl}
+                alt={top.player.name}
+                className="h-full w-full"
+              />
+            </button>
+            <span className="text-muted-foreground text-[11px]">{top.player.name}</span>
+          </div>
         </div>
 
-        {/* Name & info */}
+        {/* 선수 정보 */}
         <div
           className="text-center animate-reveal-up"
-          style={{ animationDelay: '500ms' }}
+          style={{ animationDelay: '450ms' }}
         >
-          <p className="text-xl font-bold">
-            {top.player.name}
+          <p className="text-[17px] font-bold leading-snug">
+            <span className="text-foreground">{top.player.name}</span>
+            <span className="text-muted-foreground ml-1 text-sm font-normal">
+              선수와 닮았어요
+            </span>
           </p>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="text-muted-foreground mt-1 text-[13px]">
             {top.player.team} · {top.player.position}
           </p>
         </div>
       </div>
 
-      {/* Actions */}
+      {/* ── 액션 버튼 ── */}
       <div
-        className="mb-8 flex gap-3 animate-reveal-up"
-        style={{ animationDelay: '600ms' }}
+        className="mb-8 animate-reveal-up"
+        style={{ animationDelay: '550ms' }}
       >
-        <Button
-          onClick={handleShare}
-          variant="outline"
-          className="flex-1 active:scale-[0.97]"
-          size="lg"
-        >
-          <Copy className="mr-2 h-4 w-4" />
-          공유하기
-        </Button>
-        <Button
-          onClick={handleSave}
-          disabled={isSharing}
-          variant="outline"
-          className="flex-1 active:scale-[0.97]"
-          size="lg"
-        >
-          {isSharing ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="mr-2 h-4 w-4" />
-          )}
-          저장하기
-        </Button>
-        <Button onClick={onReset} className="flex-1 active:scale-[0.97]" size="lg">
-          <RotateCcw className="mr-2 h-4 w-4" />
-          다시 하기
-        </Button>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { icon: Copy, label: '공유하기', onClick: handleShare, loading: false },
+            { icon: Download, label: '저장하기', onClick: handleSave, loading: isSharing },
+            { icon: RotateCcw, label: '다시 하기', onClick: onReset, loading: false },
+          ].map(({ icon: Icon, label, onClick, loading }) => (
+            <button
+              key={label}
+              onClick={onClick}
+              disabled={loading}
+              className="flex h-16 flex-col items-center justify-center gap-1.5 rounded-xl bg-card text-foreground transition-all active:scale-[0.96] disabled:opacity-50"
+            >
+              {loading ? (
+                <Loader2 className="h-[18px] w-[18px] animate-spin" />
+              ) : (
+                <Icon className="h-[18px] w-[18px]" />
+              )}
+              <span className="text-[11px] font-medium">{label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Top 5 */}
+      {/* ── Top 5 리스트 ── */}
       <div
         className="animate-reveal-up"
-        style={{ animationDelay: '700ms' }}
+        style={{ animationDelay: '650ms' }}
       >
-        <h2 className="text-muted-foreground mb-3 text-xs font-medium uppercase tracking-wider">
-          Top 5
-        </h2>
-        <div className="flex flex-col gap-2.5">
+        <div className="mb-3 flex items-center gap-3">
+          <h2 className="shrink-0 text-[13px] font-semibold tracking-tight">닮은꼴 Top 5</h2>
+          <div className="bg-border h-px flex-1" />
+        </div>
+        <div className="flex flex-col gap-1.5">
           {matches.map((m, i) => (
             <div
               key={m.player.id}
               className="animate-reveal-up"
-              style={{ animationDelay: `${800 + i * 80}ms` }}
+              style={{ animationDelay: `${750 + i * 60}ms` }}
             >
               <MatchCard
                 match={m}

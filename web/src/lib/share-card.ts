@@ -128,7 +128,7 @@ export const generateShareCard = async ({
   // ── 1위: 유저 사진 vs 선수 사진 (대형) ──
   // ══════════════════════════════════════
   const top1 = top3[0];
-  const top1Percent = Math.round(top1.similarity * 100);
+  const top1Percent = (Math.round(top1.similarity * 1000) / 10).toFixed(1);
   const heroY = 200;
   const heroPhotoSize = 300;
   const heroGap = 80;
@@ -210,7 +210,7 @@ export const generateShareCard = async ({
 
   for (let i = 1; i < Math.min(top3.length, 3); i++) {
     const m = top3[i];
-    const percent = Math.round(m.similarity * 100);
+    const percent = (Math.round(m.similarity * 1000) / 10).toFixed(1);
     const colX = WIDTH / 2 + (i === 1 ? -runnerUpSpacing / 2 : runnerUpSpacing / 2);
 
     // 순위 배지 배경

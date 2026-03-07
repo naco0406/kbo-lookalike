@@ -43,7 +43,7 @@ export const HomePage: FC = () => {
   // ── Processing ──
   if (state.phase === 'processing') {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="flex flex-1 items-center justify-center px-5">
         <ProcessingScreen step={state.step} previewUrl={state.previewUrl} />
       </div>
     );
@@ -53,9 +53,9 @@ export const HomePage: FC = () => {
   if (state.phase === 'error') {
     const config = ERROR_CONFIG[state.errorType];
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="mx-auto max-w-sm animate-reveal-up">
-          <div className="bg-muted mx-auto mb-6 h-44 w-44 overflow-hidden rounded-full opacity-50">
+      <div className="flex flex-1 items-center justify-center px-5">
+        <div className="w-full max-w-sm animate-reveal-up">
+          <div className="mx-auto mb-6 h-28 w-28 overflow-hidden rounded-2xl opacity-30">
             <img
               src={state.previewUrl}
               alt="업로드한 사진"
@@ -63,28 +63,27 @@ export const HomePage: FC = () => {
             />
           </div>
 
-          <div className="rounded-2xl border p-6 text-center">
-            <div className="bg-destructive/10 mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-full">
-              <AlertTriangle className="text-destructive h-5 w-5" />
+          <div className="rounded-2xl border p-5 text-center sm:p-6">
+            <div className="bg-destructive/10 mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full">
+              <AlertTriangle className="text-destructive h-4.5 w-4.5" />
             </div>
-            <h2 className="mb-1.5 text-base font-semibold">{config.title}</h2>
-            <ul className="text-muted-foreground mb-6 space-y-0.5 text-sm">
+            <h2 className="mb-1 text-[15px] font-semibold">{config.title}</h2>
+            <ul className="text-muted-foreground mb-5 space-y-0.5 text-[13px]">
               {config.tips.map((tip) => (
                 <li key={tip}>{tip}</li>
               ))}
             </ul>
-            <div className="flex gap-3">
+            <div className="flex gap-2.5">
               <Button
                 onClick={reset}
                 variant="outline"
-                className="flex-1 active:scale-[0.97]"
-                size="lg"
+                className="h-11 flex-1 text-[13px] active:scale-[0.97]"
               >
-                <ImagePlus className="mr-2 h-4 w-4" />
+                <ImagePlus className="mr-1.5 h-4 w-4" />
                 다른 사진
               </Button>
-              <Button onClick={run} className="flex-1 active:scale-[0.97]" size="lg">
-                <RefreshCw className="mr-2 h-4 w-4" />
+              <Button onClick={run} className="h-11 flex-1 text-[13px] active:scale-[0.97]">
+                <RefreshCw className="mr-1.5 h-4 w-4" />
                 다시 시도
               </Button>
             </div>
@@ -97,27 +96,28 @@ export const HomePage: FC = () => {
   // ── Preview (image selected) ──
   if (state.phase === 'preview') {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="mx-auto flex max-w-sm flex-col items-center gap-5 animate-scale-reveal">
-          <div className="relative aspect-square w-full overflow-hidden rounded-3xl shadow-lg">
+      <div className="flex flex-1 items-center justify-center px-5">
+        <div className="flex w-full max-w-sm flex-col items-center gap-5 animate-scale-reveal">
+          <div className="relative aspect-[3/4] w-full max-w-[260px] overflow-hidden rounded-3xl shadow-xl">
             <img
               src={state.previewUrl}
               alt="선택한 사진"
               className="h-full w-full object-cover"
             />
-            {/* Gradient overlay at bottom */}
-            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/30 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/25 to-transparent" />
           </div>
-          <div className="flex w-full gap-3">
-            <Button onClick={run} className="flex-1 active:scale-[0.97]" size="lg">
-              <Sparkles className="mr-2 h-4 w-4" />
+          <div className="flex w-full max-w-[260px] gap-2.5">
+            <Button
+              onClick={run}
+              className="h-11 flex-1 text-[14px] active:scale-[0.97]"
+            >
+              <Sparkles className="mr-1.5 h-4 w-4" />
               분석 시작
             </Button>
             <Button
               onClick={reset}
               variant="outline"
-              size="lg"
-              className="active:scale-[0.97]"
+              className="h-11 active:scale-[0.97]"
             >
               다른 사진
             </Button>
@@ -129,32 +129,43 @@ export const HomePage: FC = () => {
 
   // ── Idle (landing) ──
   return (
-    <div className="container mx-auto flex flex-col items-center px-4 py-10 sm:py-16">
-      <div className="mb-10 max-w-md text-center animate-reveal-up sm:mb-14">
-        <h1 className="text-[2rem] leading-tight font-bold tracking-tight sm:text-4xl">
+    <div className="flex flex-1 flex-col items-center justify-center px-5 pb-6">
+      {/* Hero */}
+      <div className="mb-10 max-w-xs text-center animate-reveal-up sm:mb-12 sm:max-w-sm">
+        <p
+          className="text-muted-foreground mb-3 text-[11px] font-medium uppercase tracking-[0.2em] animate-reveal-up"
+        >
+          763명의 KBO 프로야구 선수
+        </p>
+        <h1 className="text-[2rem] leading-[1.2] font-extrabold tracking-tight sm:text-[2.5rem]">
           나와 닮은
           <br />
           KBO 선수는?
         </h1>
-        <p className="text-muted-foreground mt-4 text-balance text-sm leading-relaxed sm:text-base">
-          763명의 KBO 프로야구 선수 중
-          <br className="sm:hidden" />
-          {' '}나와 가장 닮은 선수를 찾아보세요
+        <p
+          className="text-muted-foreground mt-3 text-balance text-[15px] leading-relaxed animate-reveal-up"
+          style={{ animationDelay: '100ms' }}
+        >
+          사진 한 장이면 AI가 찾아드립니다
         </p>
       </div>
 
-      <div className="w-full animate-reveal-up" style={{ animationDelay: '150ms' }}>
+      {/* Upload */}
+      <div
+        className="w-full max-w-sm animate-reveal-up"
+        style={{ animationDelay: '200ms' }}
+      >
         <ImageUpload onImageSelect={selectImage} />
       </div>
 
       {/* Trust badge */}
       <div
-        className="mt-10 flex items-center gap-2 animate-reveal-up"
-        style={{ animationDelay: '300ms' }}
+        className="mt-6 flex items-center gap-1.5 animate-reveal-up"
+        style={{ animationDelay: '400ms' }}
       >
-        <ShieldCheck className="text-muted-foreground h-3.5 w-3.5" />
-        <span className="text-muted-foreground text-xs">
-          사진은 브라우저에서만 처리됩니다
+        <ShieldCheck className="text-muted-foreground/50 h-3.5 w-3.5 shrink-0" />
+        <span className="text-muted-foreground/50 text-[11px]">
+          사진은 기기에서만 처리되며 서버로 전송되지 않습니다
         </span>
       </div>
     </div>
