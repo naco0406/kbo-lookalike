@@ -6,7 +6,7 @@
  * 프리로드 중 실제 사용 시점이 오면 동일 프라미스를 공유하여 중복 다운로드 없이 대기.
  */
 import { warmup } from './ort-session';
-import { loadPlayerData } from './similarity';
+import { loadPlayerData, preloadSamplePlayerImages } from './similarity';
 import { loadClassificationData } from './classify';
 
 let _started = false;
@@ -21,10 +21,12 @@ export const startPreload = () => {
     console.warn('[Preload] Model warmup failed — will retry on demand:', e);
   });
 
-  // 선수 데이터 + 분류 중심점
-  loadPlayerData().catch((e) => {
-    console.warn('[Preload] Player data load failed — will retry on demand:', e);
-  });
+  // 선수 데이터 + 분류 중심점 → 데이터 로드 후 타일 이미지 프리로드
+  loadPlayerData()
+    .then(() => preloadSamplePlayerImages())
+    .catch((e) => {
+      console.warn('[Preload] Player data load failed — will retry on demand:', e);
+    });
 
   loadClassificationData().catch((e) => {
     console.warn('[Preload] Classification data load failed — will retry on demand:', e);

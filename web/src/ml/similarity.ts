@@ -180,9 +180,23 @@ export const isDataLoaded = (): boolean => {
   return metadata !== null && embeddingMatrix !== null;
 };
 
-/** 매칭 스테이지 타일 그리드용 랜덤 선수 이미지 URL 추출 */
+/** 프리로드된 샘플 URL 캐시 */
+let _cachedSampleUrls: string[] | null = null;
+
+/** 매칭 스테이지 타일 그리드용 랜덤 선수 이미지 URL 추출 (캐시 재사용) */
 export const getSamplePlayerImageUrls = (count = 30): string[] => {
+  if (_cachedSampleUrls && _cachedSampleUrls.length >= count) return _cachedSampleUrls.slice(0, count);
   if (!metadata || !playerIndex) return [];
   const shuffled = [...metadata.players].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count).map((p) => playerIndex!.get(p.id)?.imageUrl ?? '').filter(Boolean);
+  _cachedSampleUrls = shuffled.slice(0, count).map((p) => playerIndex!.get(p.id)?.imageUrl ?? '').filter(Boolean);
+  return _cachedSampleUrls;
+};
+
+/** 샘플 선수 이미지를 브라우저 캐시에 프리로드 (fire-and-forget) */
+export const preloadSamplePlayerImages = (count = 30): void => {
+  const urls = getSamplePlayerImageUrls(count);
+  for (const url of urls) {
+    const img = new Image();
+    img.src = url;
+  }
 };
