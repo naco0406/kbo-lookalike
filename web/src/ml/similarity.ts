@@ -1,9 +1,5 @@
 import type { Player, PlayerMetadata, GalleryEmbeddings, MatchResult } from '@/types/player';
-
-const R2_BASE = import.meta.env.VITE_R2_BASE ?? '';
-
-const toAbsoluteImageUrl = (relativeUrl: string): string =>
-  R2_BASE && relativeUrl.startsWith('/') ? `${R2_BASE}${relativeUrl}` : relativeUrl;
+import { assetUrl } from './asset-url';
 
 let metadata: PlayerMetadata | null = null;
 let embeddingMatrix: Float32Array[][] | null = null;
@@ -15,8 +11,8 @@ export const loadPlayerData = async (): Promise<{ count: number }> => {
   }
 
   const [metaRes, embRes] = await Promise.all([
-    fetch('/data/player_metadata.json'),
-    fetch('/data/player_embeddings_gallery.json'),
+    fetch(assetUrl('/data/player_metadata.json')),
+    fetch(assetUrl('/data/player_embeddings_gallery.json')),
   ]);
 
   metadata = (await metaRes.json()) as PlayerMetadata;
@@ -24,7 +20,7 @@ export const loadPlayerData = async (): Promise<{ count: number }> => {
 
   // 이미지 URL을 R2 절대 경로로 변환
   playerIndex = new Map(
-    metadata.players.map((p) => [p.id, { ...p, imageUrl: toAbsoluteImageUrl(p.imageUrl) }]),
+    metadata.players.map((p) => [p.id, { ...p, imageUrl: assetUrl(p.imageUrl) }]),
   );
 
   // 선수별 임베딩 배열 (복수) — 갤러리 포맷

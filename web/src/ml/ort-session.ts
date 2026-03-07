@@ -1,4 +1,5 @@
 import * as ort from 'onnxruntime-web';
+import { assetUrl } from './asset-url';
 
 ort.env.wasm.wasmPaths = '/';
 ort.env.wasm.numThreads = Math.min(navigator.hardwareConcurrency ?? 4, 4);
@@ -6,15 +7,16 @@ ort.env.wasm.numThreads = Math.min(navigator.hardwareConcurrency ?? 4, 4);
 const sessionCache = new Map<string, ort.InferenceSession>();
 
 export const getSession = async (modelPath: string): Promise<ort.InferenceSession> => {
-  const cached = sessionCache.get(modelPath);
+  const url = assetUrl(modelPath);
+  const cached = sessionCache.get(url);
   if (cached) return cached;
 
-  const session = await ort.InferenceSession.create(modelPath, {
+  const session = await ort.InferenceSession.create(url, {
     executionProviders: ['wasm'],
     graphOptimizationLevel: 'all',
   });
 
-  sessionCache.set(modelPath, session);
+  sessionCache.set(url, session);
   return session;
 };
 
