@@ -12,7 +12,12 @@ if (!existsSync(src)) {
   process.exit(0);
 }
 
-const files = ['ort-wasm-simd-threaded.wasm', 'ort-wasm-simd-threaded.jsep.wasm'];
+const files = [
+  'ort-wasm-simd-threaded.wasm',
+  'ort-wasm-simd-threaded.jsep.wasm',
+  'ort-wasm-simd-threaded.mjs',
+  'ort-wasm-simd-threaded.jsep.mjs',
+];
 for (const f of files) {
   const s = join(src, f);
   if (existsSync(s)) {

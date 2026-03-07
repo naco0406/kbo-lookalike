@@ -23,6 +23,13 @@ web/.vite/
 web/public/models
 web/public/data
 web/public/images/players
+web/public/*.wasm
+web/public/*.mjs
+
+# === Cloudflare ===
+.wrangler/
+web/.wrangler/
+upload-r2.sh
 
 # === OS ===
 .DS_Store

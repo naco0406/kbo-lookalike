@@ -1,5 +1,10 @@
 import type { Player, PlayerMetadata, GalleryEmbeddings, MatchResult } from '@/types/player';
 
+const R2_BASE = import.meta.env.VITE_R2_BASE ?? '';
+
+const toAbsoluteImageUrl = (relativeUrl: string): string =>
+  R2_BASE && relativeUrl.startsWith('/') ? `${R2_BASE}${relativeUrl}` : relativeUrl;
+
 let metadata: PlayerMetadata | null = null;
 let embeddingMatrix: Float32Array[][] | null = null;
 let playerIndex: Map<string, Player> | null = null;
@@ -17,7 +22,10 @@ export const loadPlayerData = async (): Promise<{ count: number }> => {
   metadata = (await metaRes.json()) as PlayerMetadata;
   const gallery = (await embRes.json()) as GalleryEmbeddings;
 
-  playerIndex = new Map(metadata.players.map((p) => [p.id, p]));
+  // 이미지 URL을 R2 절대 경로로 변환
+  playerIndex = new Map(
+    metadata.players.map((p) => [p.id, { ...p, imageUrl: toAbsoluteImageUrl(p.imageUrl) }]),
+  );
 
   // 선수별 임베딩 배열 (복수) — 갤러리 포맷
   embeddingMatrix = metadata.players.map((p) => {
@@ -53,10 +61,13 @@ export const findTopMatches = (queryEmbedding: Float32Array, topK = 5): MatchRes
 
   scores.sort((a, b) => b.sim - a.sim);
 
-  return scores.slice(0, topK).map((s) => ({
-    player: metadata!.players[s.idx],
-    similarity: s.sim,
-  }));
+  return scores.slice(0, topK).map((s) => {
+    const original = metadata!.players[s.idx];
+    return {
+      player: playerIndex!.get(original.id) ?? original,
+      similarity: s.sim,
+    };
+  });
 };
 
 export const isDataLoaded = (): boolean => {

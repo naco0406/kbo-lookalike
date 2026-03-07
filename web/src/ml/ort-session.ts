@@ -1,5 +1,6 @@
 import * as ort from 'onnxruntime-web';
 
+ort.env.wasm.wasmPaths = '/';
 ort.env.wasm.numThreads = Math.min(navigator.hardwareConcurrency ?? 4, 4);
 
 const sessionCache = new Map<string, ort.InferenceSession>();
