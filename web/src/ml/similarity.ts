@@ -230,6 +230,7 @@ export const getMatchTileUrls = (matches: MatchResult[], count = 30): string[] =
  *
  * fetch → blob → URL.createObjectURL 변환 후 캐시에 덮어쓰기.
  * <img> 태그에서 blob URL을 사용하면 추가 네트워크 요청이 발생하지 않음.
+ * CORS 실패 시 <link rel="preload"> 로 브라우저 캐시에 저장 후 원본 URL 반환.
  */
 export const preloadMatchTileImages = (matches: MatchResult[], count = 30): void => {
   const originalUrls = getMatchTileUrls(matches, count);
@@ -242,6 +243,12 @@ export const preloadMatchTileImages = (matches: MatchResult[], count = 30): void
         const blob = await res.blob();
         return URL.createObjectURL(blob);
       } catch {
+        // CORS 실패 — <link rel="preload">로 브라우저 preload cache에 저장
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'image';
+        link.href = url;
+        document.head.appendChild(link);
         return url;
       }
     }),
