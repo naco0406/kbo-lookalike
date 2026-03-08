@@ -225,11 +225,27 @@ export const getMatchTileUrls = (matches: MatchResult[], count = 30): string[] =
   return shuffled;
 };
 
-/** 매칭 타일 이미지를 브라우저 캐시에 프리로드 (fire-and-forget) */
+/**
+ * 매칭 타일 이미지를 blob URL로 프리로드 (fire-and-forget)
+ *
+ * fetch → blob → URL.createObjectURL 변환 후 캐시에 덮어쓰기.
+ * <img> 태그에서 blob URL을 사용하면 추가 네트워크 요청이 발생하지 않음.
+ */
 export const preloadMatchTileImages = (matches: MatchResult[], count = 30): void => {
-  const urls = getMatchTileUrls(matches, count);
-  for (const url of urls) {
-    const img = new Image();
-    img.src = url;
-  }
+  const originalUrls = getMatchTileUrls(matches, count);
+  const topId = matches[0].player.id;
+
+  Promise.all(
+    originalUrls.map(async (url) => {
+      try {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        return URL.createObjectURL(blob);
+      } catch {
+        return url;
+      }
+    }),
+  ).then((blobUrls) => {
+    _matchTileCache = { topId, urls: blobUrls };
+  });
 };

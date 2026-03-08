@@ -137,7 +137,7 @@ export const StageMatching: FC<StageMatchingProps> = ({ pendingMatches }) => {
             <div className="flex flex-col items-center gap-3 animate-scale-reveal">
               <div className="h-28 w-28 overflow-hidden rounded-2xl shadow-xl ring-2 ring-border sm:h-32 sm:w-32">
                 <img
-                  src={topMatch.player.imageUrl}
+                  src={tileUrls[14] || topMatch.player.imageUrl}
                   alt={topMatch.player.name}
                   className="h-full w-full object-cover"
                 />
