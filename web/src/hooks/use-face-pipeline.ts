@@ -15,8 +15,8 @@ const CONSOLIDATED_GROUPS: PipelineStep[][] = [
   ['searching'],
 ];
 
-// 각 그룹별 최소 표시 시간 (ms) — 총 ~12초
-const MIN_GROUP_MS = [600, 1800, 2200, 2000, 2000, 3500];
+// 각 그룹별 최소 표시 시간 (ms) — 총 ~13초
+const MIN_GROUP_MS = [600, 1800, 2200, 2500, 2500, 3500];
 const MIN_TOTAL_MS = 12000;
 
 const getGroupIndex = (step: PipelineStep): number =>
@@ -64,9 +64,11 @@ export const useFacePipeline = () => {
         let payload: StepPayload | undefined;
 
         if (step === 'cropping-face') {
+          // pendingMatches를 최대한 일찍 전달 → 이후 모든 스테이지 동안 타일 이미지 프리로드
           payload = {
             faceRect: res.faceRect,
             croppedFaceUrl: res.croppedFaceUrl,
+            pendingMatches: res.matches,
           };
         } else if (step === 'classifying-position') {
           payload = {
@@ -76,10 +78,6 @@ export const useFacePipeline = () => {
           payload = {
             teamResult: res.classification.team,
             isBaseballFace: res.classification.isBaseballFace,
-          };
-        } else if (step === 'searching') {
-          payload = {
-            pendingMatches: res.matches,
           };
         }
 
