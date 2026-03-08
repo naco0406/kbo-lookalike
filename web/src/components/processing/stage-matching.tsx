@@ -1,45 +1,90 @@
 import type { FC } from 'react';
 import { useMemo, useState, useEffect, useRef } from 'react';
 import type { MatchResult } from '@/types/player';
-import { getSamplePlayerImageUrls } from '@/ml/similarity';
-import { STAGE_MESSAGES, getTeamDisplayName, pickRandom } from '@/constants/analysis-messages';
+import { getMatchTileUrls } from '@/ml/similarity';
+import { getTeamDisplayName, pickRandom } from '@/constants/analysis-messages';
 import { cn } from '@/lib/utils';
 
 const GRID_COUNT = 30; // 6×5 grid
 const PHASE1_DURATION = 1400; // tiles appear
 const PHASE2_DURATION = 1200; // shuffle + eliminate
 const PHASE3_DELAY = PHASE1_DURATION + PHASE2_DURATION; // hero reveal starts
+const IMAGE_LOAD_TIMEOUT = 3000; // 안전장치: 최대 3초 대기
 
-type Phase = 'appear' | 'eliminate' | 'reveal';
+// 페이즈별 스토리텔링 메시지
+const PHASE_MESSAGES = {
+  appear: [
+    '후보 선수들을 불러모으는 중...',
+    '이 선수들 중 닮은꼴이 있을까?',
+    '최종 후보군을 소집했어요',
+    '닮은 선수가 꽤 있는데요...?',
+  ],
+  eliminate: [
+    '한 명씩 대조하는 중...',
+    '후보를 좁혀가고 있어요...',
+    '점점 가까워지고 있어요...',
+    '거의 찾은 것 같아요!',
+  ],
+} as const;
+
+type Phase = 'waiting' | 'appear' | 'eliminate' | 'reveal';
 
 interface StageMatchingProps {
   pendingMatches?: MatchResult[];
 }
 
 export const StageMatching: FC<StageMatchingProps> = ({ pendingMatches }) => {
-  const message = useMemo(() => pickRandom(STAGE_MESSAGES.matching), []);
   const topMatch = pendingMatches?.[0];
 
-  // 랜덤 선수 이미지 + top match 이미지를 포함
-  const tileUrls = useMemo(() => {
-    const samples = getSamplePlayerImageUrls(GRID_COUNT);
-    // top match 이미지를 중앙(index 14)에 배치
-    if (topMatch) {
-      const centerIdx = 14;
-      // 이미 포함되어 있으면 제거 후 중앙에 삽입
-      const filtered = samples.filter((url) => url !== topMatch.player.imageUrl);
-      const result = filtered.slice(0, GRID_COUNT - 1);
-      result.splice(centerIdx, 0, topMatch.player.imageUrl);
-      return result;
-    }
-    return samples;
-  }, [topMatch]);
+  const appearMessage = useMemo(() => pickRandom(PHASE_MESSAGES.appear), []);
+  const eliminateMessage = useMemo(() => pickRandom(PHASE_MESSAGES.eliminate), []);
 
-  const [phase, setPhase] = useState<Phase>('appear');
+  // 매치 결과 기반 타일 URL (상위 팀 선수 분포 + 중앙에 topMatch)
+  const tileUrls = useMemo(() => {
+    if (!pendingMatches || pendingMatches.length === 0) return [];
+    return getMatchTileUrls(pendingMatches, GRID_COUNT);
+  }, [pendingMatches]);
+
+  const [phase, setPhase] = useState<Phase>('waiting');
   const [eliminatedSet, setEliminatedSet] = useState<Set<number>>(new Set());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // 모든 타일 이미지가 브라우저 캐시에 준비될 때까지 대기
+  // (processing-screen에서 pendingMatches 도착 시 이미 프리로드 시작했으므로 대부분 즉시 완료)
   useEffect(() => {
+    let cancelled = false;
+    const urls = tileUrls.filter(Boolean);
+
+    if (urls.length === 0) return;
+
+    const imagePromises = urls.map(
+      (url) =>
+        new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+          img.src = url;
+        }),
+    );
+
+    // 안전장치: 느린 네트워크에서도 최대 3초만 대기
+    const timeout = new Promise<void>((resolve) =>
+      setTimeout(resolve, IMAGE_LOAD_TIMEOUT),
+    );
+
+    Promise.race([Promise.all(imagePromises), timeout]).then(() => {
+      if (!cancelled) setPhase('appear');
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tileUrls]);
+
+  // 이미지 준비 완료 → 애니메이션 시작
+  useEffect(() => {
+    if (phase !== 'appear') return;
+
     // Phase 1→2: 타일 등장 → 소거 시작
     timerRef.current = setTimeout(() => {
       setPhase('eliminate');
@@ -65,17 +110,22 @@ export const StageMatching: FC<StageMatchingProps> = ({ pendingMatches }) => {
       if (timerRef.current) clearTimeout(timerRef.current);
       clearTimeout(revealTimer);
     };
-  }, []);
+  }, [phase]);
 
   const isRevealed = phase === 'reveal';
+
+  // 페이즈별 메시지
+  const message = (() => {
+    if (isRevealed && topMatch) return `${topMatch.player.name} 선수를 찾았어요!`;
+    if (phase === 'eliminate') return eliminateMessage;
+    return appearMessage;
+  })();
 
   return (
     <div className="flex flex-col items-center gap-5">
       {/* 상단 텍스트 */}
       <p className="text-muted-foreground text-center text-[13px] font-medium">
-        {isRevealed && topMatch
-          ? `${topMatch.player.name} 선수를 찾았어요!`
-          : message}
+        {message}
       </p>
 
       {/* 타일 그리드 */}
@@ -95,6 +145,7 @@ export const StageMatching: FC<StageMatchingProps> = ({ pendingMatches }) => {
                 key={i}
                 className={cn(
                   'h-11 w-11 overflow-hidden rounded-lg sm:h-12 sm:w-12',
+                  phase === 'waiting' && 'opacity-0',
                   isEliminated && 'animate-tile-disappear',
                   !isEliminated && phase === 'appear' && 'animate-tile-appear',
                   !isEliminated && phase === 'eliminate' && !isCenter && 'animate-tile-pulse',

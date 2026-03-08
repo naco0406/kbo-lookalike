@@ -7,6 +7,7 @@ import { StageAiAnalysis } from './stage-ai-analysis';
 import { StagePosition } from './stage-position';
 import { StageTeam } from './stage-team';
 import { StageMatching } from './stage-matching';
+import { preloadMatchTileImages } from '@/ml/similarity';
 import { cn } from '@/lib/utils';
 
 type Stage = 'loading' | 'face-detection' | 'ai-analysis' | 'position' | 'team' | 'matching';
@@ -93,6 +94,15 @@ export const ProcessingScreen: FC<ProcessingScreenProps> = ({
 
     return () => clearTimeout(timer);
   }, [currentStage, displayedStage]);
+
+  // 매칭 결과 도착 즉시 타일 이미지 프리로드 (position/team 스테이지 연출 중 로딩)
+  const preloadTriggered = useRef(false);
+  useEffect(() => {
+    if (pendingMatches && pendingMatches.length > 0 && !preloadTriggered.current) {
+      preloadTriggered.current = true;
+      preloadMatchTileImages(pendingMatches);
+    }
+  }, [pendingMatches]);
 
   // Loading 단계: 간단한 로딩 표시
   if (displayedStage === 'loading') {

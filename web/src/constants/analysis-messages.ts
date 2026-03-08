@@ -33,14 +33,6 @@ export const STAGE_MESSAGES = {
     '어떤 팀 모자가 어울릴까요...',
     '운명의 구단을 찾는 중...',
   ],
-  matching: [
-    '763명의 선수 중 당신의 쌍둥이를 찾는 중...',
-    'KBO 역대 선수와 대조 중...',
-    '완벽한 닮은꼴을 찾고 있어요...',
-    '닮은 선수가 꽤 있는데요...?',
-    '최종 후보를 좁히는 중...',
-    '거의 다 찾았어요!',
-  ],
 } as const;
 
 export const NOT_BASEBALL_FACE_MESSAGES = [

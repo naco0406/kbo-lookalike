@@ -180,21 +180,54 @@ export const isDataLoaded = (): boolean => {
   return metadata !== null && embeddingMatrix !== null;
 };
 
-/** 프리로드된 샘플 URL 캐시 */
-let _cachedSampleUrls: string[] | null = null;
+/**
+ * 매칭 결과 기반 타일 그리드 URL 생성
+ *
+ * Top 5 매치에 등장하는 팀들의 선수로 타일을 구성하여
+ * "후보군에서 찾는 중" 스토리텔링을 강화.
+ * topMatch(1위)는 중앙(index 14)에 배치.
+ * 동일 matches에 대해 캐시된 결과를 재사용.
+ */
+let _matchTileCache: { topId: string; urls: string[] } | null = null;
 
-/** 매칭 스테이지 타일 그리드용 랜덤 선수 이미지 URL 추출 (캐시 재사용) */
-export const getSamplePlayerImageUrls = (count = 30): string[] => {
-  if (_cachedSampleUrls && _cachedSampleUrls.length >= count) return _cachedSampleUrls.slice(0, count);
-  if (!metadata || !playerIndex) return [];
-  const shuffled = [...metadata.players].sort(() => Math.random() - 0.5);
-  _cachedSampleUrls = shuffled.slice(0, count).map((p) => playerIndex!.get(p.id)?.imageUrl ?? '').filter(Boolean);
-  return _cachedSampleUrls;
+export const getMatchTileUrls = (matches: MatchResult[], count = 30): string[] => {
+  if (!metadata || !playerIndex || matches.length === 0) return [];
+
+  const topId = matches[0].player.id;
+  if (_matchTileCache?.topId === topId) return _matchTileCache.urls;
+
+  // 매치에 등장하는 팀 코드 (중복 제거, 순서 유지)
+  const teamCodes = [...new Set(matches.map((m) => m.player.teamCode))];
+  const matchIds = new Set(matches.map((m) => m.player.id));
+
+  // 각 팀에서 후보 선수 수집 (매치 선수 본인 제외)
+  const candidates: string[] = [];
+  const perTeam = Math.ceil((count - 1) / teamCodes.length);
+
+  for (const tc of teamCodes) {
+    const teamPlayers = metadata.players
+      .filter((p) => p.teamCode === tc && !matchIds.has(p.id))
+      .sort(() => Math.random() - 0.5)
+      .slice(0, perTeam);
+
+    for (const p of teamPlayers) {
+      const url = playerIndex!.get(p.id)?.imageUrl;
+      if (url) candidates.push(url);
+    }
+  }
+
+  // 셔플 후 count-1개 추출, 중앙에 topMatch 삽입
+  const shuffled = candidates.sort(() => Math.random() - 0.5).slice(0, count - 1);
+  const centerIdx = Math.min(14, shuffled.length);
+  shuffled.splice(centerIdx, 0, matches[0].player.imageUrl);
+
+  _matchTileCache = { topId, urls: shuffled };
+  return shuffled;
 };
 
-/** 샘플 선수 이미지를 브라우저 캐시에 프리로드 (fire-and-forget) */
-export const preloadSamplePlayerImages = (count = 30): void => {
-  const urls = getSamplePlayerImageUrls(count);
+/** 매칭 타일 이미지를 브라우저 캐시에 프리로드 (fire-and-forget) */
+export const preloadMatchTileImages = (matches: MatchResult[], count = 30): void => {
+  const urls = getMatchTileUrls(matches, count);
   for (const url of urls) {
     const img = new Image();
     img.src = url;
