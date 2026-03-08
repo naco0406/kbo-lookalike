@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState, useRef, useEffect } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Slider } from '@/components/ui/slider';
 import { usePlayerAlign } from '@/hooks/use-player-align';
 import { X, Loader2 } from 'lucide-react';
@@ -14,7 +14,6 @@ interface FaceMorphDialogProps {
 }
 
 const CANVAS_SIZE = 112;
-const DISPLAY_SIZE = 280;
 
 export const FaceMorphDialog: FC<FaceMorphDialogProps> = ({
   open,
@@ -93,9 +92,10 @@ export const FaceMorphDialog: FC<FaceMorphDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="flex max-h-[90dvh] max-w-[90vw] flex-col items-center justify-center gap-0 border-none bg-black/95 p-0 sm:max-w-md"
+        className="flex max-h-[90dvh] max-w-[88vw] flex-col items-center gap-0 overflow-hidden border-none bg-black/95 p-0 sm:max-w-sm"
       >
         <DialogTitle className="sr-only">얼굴 겹치기 비교</DialogTitle>
+        <DialogDescription className="sr-only">슬라이더로 두 얼굴을 겹쳐 비교합니다</DialogDescription>
 
         {/* 닫기 버튼 */}
         <button
@@ -106,41 +106,55 @@ export const FaceMorphDialog: FC<FaceMorphDialogProps> = ({
         </button>
 
         {/* 콘텐츠 영역 */}
-        <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
-          {/* 캔버스 */}
-          <div
-            className="overflow-hidden rounded-2xl bg-black"
-            style={{ width: DISPLAY_SIZE, height: DISPLAY_SIZE }}
-          >
+        <div className="flex w-full flex-col items-center px-6 pt-12 pb-8">
+          {/* 캔버스 — 정사각형, 가용 폭에 맞춤 */}
+          <div className="aspect-square w-full max-w-[280px] overflow-hidden rounded-3xl ring-1 ring-white/10">
             {loading ? (
               <div className="flex h-full w-full items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-white/40" />
+                <Loader2 className="h-6 w-6 animate-spin text-white/30" />
               </div>
             ) : error ? (
-              <div className="flex h-full w-full items-center justify-center">
-                <p className="text-sm text-white/40">얼굴 정렬 실패</p>
+              <div className="flex h-full w-full flex-col items-center justify-center gap-1.5">
+                <p className="text-[13px] text-white/40">얼굴을 찾을 수 없어요</p>
               </div>
             ) : (
               <canvas
                 ref={canvasRef}
                 width={CANVAS_SIZE}
                 height={CANVAS_SIZE}
-                style={{ width: DISPLAY_SIZE, height: DISPLAY_SIZE, imageRendering: 'auto' }}
+                className="h-full w-full"
+                style={{ imageRendering: 'auto' }}
               />
             )}
           </div>
 
-          {/* 슬라이더 */}
+          {/* 슬라이더 + 얼굴 썸네일 */}
           {isReady && (
-            <div className="w-full max-w-[280px]">
-              <Slider
-                value={[blend]}
-                onValueChange={([v]) => setBlend(v)}
-                min={0}
-                max={100}
-                step={1}
-              />
-              <div className="mt-2 flex justify-between text-xs text-white/50">
+            <div className="mt-8 w-full max-w-[300px]">
+              <div className="flex items-center gap-3">
+                {/* 유저 얼굴 */}
+                <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full ring-1 ring-white/15">
+                  <img src={userAlignedUrl} alt="나" className="h-full w-full object-cover" />
+                </div>
+
+                <div className="flex-1">
+                  <Slider
+                    value={[blend]}
+                    onValueChange={([v]) => setBlend(v)}
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="[&_[data-slot=slider-track]]:bg-white/15 [&_[data-slot=slider-range]]:bg-white/40 [&_[data-slot=slider-thumb]]:border-white/60 [&_[data-slot=slider-thumb]]:bg-white"
+                  />
+                </div>
+
+                {/* 선수 얼굴 */}
+                <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full ring-1 ring-white/15">
+                  <img src={playerAlignedUrl} alt={playerName} className="h-full w-full object-cover" />
+                </div>
+              </div>
+
+              <div className="mt-2.5 flex justify-between px-0.5 text-[11px] text-white/40">
                 <span>나</span>
                 <span>{playerName}</span>
               </div>
