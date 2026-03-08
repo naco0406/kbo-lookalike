@@ -3,12 +3,6 @@ import { detectFaces } from '@/ml/scrfd';
 import { alignFace } from '@/ml/face-align';
 import { imageDataToUrl } from '@/ml/face-crop';
 
-const R2_BASE = 'https://assets.naco.kr';
-
-/** R2 URL → 같은 도메인 프록시로 변환 (CORS 회피) */
-const toProxyUrl = (url: string): string =>
-  url.startsWith(R2_BASE) ? url.replace(R2_BASE, '/r2') : url;
-
 /** 선수 이미지를 ArcFace 112×112 정렬된 얼굴로 변환하는 훅 */
 export const usePlayerAlign = (
   playerImageUrl: string | null,
@@ -43,8 +37,8 @@ export const usePlayerAlign = (
       setAlignedUrl(null);
 
       try {
-        // 1. 이미지 로드 (프록시 URL로 same-origin fetch — CORS 불필요)
-        const response = await fetch(toProxyUrl(playerImageUrl));
+        // 1. 이미지 로드 (CORS 필수 — R2 Transform Rule로 헤더 제공)
+        const response = await fetch(playerImageUrl, { mode: 'cors' });
         const blob = await response.blob();
 
         if (cancelled) return;
@@ -70,7 +64,8 @@ export const usePlayerAlign = (
         cacheRef.current.set(playerImageUrl, url);
         setAlignedUrl(url);
         setLoading(false);
-      } catch {
+      } catch (e) {
+        console.error('[usePlayerAlign] Failed:', e);
         if (!cancelled) {
           setError(true);
           setLoading(false);
