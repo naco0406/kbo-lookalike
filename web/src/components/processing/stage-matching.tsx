@@ -9,7 +9,6 @@ const GRID_COUNT = 30; // 6×5 grid
 const PHASE1_DURATION = 1400; // tiles appear
 const PHASE2_DURATION = 1200; // shuffle + eliminate
 const PHASE3_DELAY = PHASE1_DURATION + PHASE2_DURATION; // hero reveal starts
-const IMAGE_LOAD_TIMEOUT = 3000; // 안전장치: 최대 3초 대기
 
 // 페이즈별 스토리텔링 메시지
 const PHASE_MESSAGES = {
@@ -27,7 +26,7 @@ const PHASE_MESSAGES = {
   ],
 } as const;
 
-type Phase = 'waiting' | 'appear' | 'eliminate' | 'reveal';
+type Phase = 'appear' | 'eliminate' | 'reveal';
 
 interface StageMatchingProps {
   pendingMatches?: MatchResult[];
@@ -39,52 +38,18 @@ export const StageMatching: FC<StageMatchingProps> = ({ pendingMatches }) => {
   const appearMessage = useMemo(() => pickRandom(PHASE_MESSAGES.appear), []);
   const eliminateMessage = useMemo(() => pickRandom(PHASE_MESSAGES.eliminate), []);
 
-  // 매치 결과 기반 타일 URL (상위 팀 선수 분포 + 중앙에 topMatch)
+  // 매치 결과 기반 타일 URL — 캐시에서 프리로드 때와 동일한 URL 반환 (새 네트워크 요청 없음)
   const tileUrls = useMemo(() => {
     if (!pendingMatches || pendingMatches.length === 0) return [];
     return getMatchTileUrls(pendingMatches, GRID_COUNT);
   }, [pendingMatches]);
 
-  const [phase, setPhase] = useState<Phase>('waiting');
+  const [phase, setPhase] = useState<Phase>('appear');
   const [eliminatedSet, setEliminatedSet] = useState<Set<number>>(new Set());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 모든 타일 이미지가 브라우저 캐시에 준비될 때까지 대기
-  // (processing-screen에서 pendingMatches 도착 시 이미 프리로드 시작했으므로 대부분 즉시 완료)
+  // 애니메이션 — 프리로드가 ~7초 전에 완료했으므로 즉시 시작
   useEffect(() => {
-    let cancelled = false;
-    const urls = tileUrls.filter(Boolean);
-
-    if (urls.length === 0) return;
-
-    const imagePromises = urls.map(
-      (url) =>
-        new Promise<void>((resolve) => {
-          const img = new Image();
-          img.onload = () => resolve();
-          img.onerror = () => resolve();
-          img.src = url;
-        }),
-    );
-
-    // 안전장치: 느린 네트워크에서도 최대 3초만 대기
-    const timeout = new Promise<void>((resolve) =>
-      setTimeout(resolve, IMAGE_LOAD_TIMEOUT),
-    );
-
-    Promise.race([Promise.all(imagePromises), timeout]).then(() => {
-      if (!cancelled) setPhase('appear');
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [tileUrls]);
-
-  // 이미지 준비 완료 → 애니메이션 시작
-  useEffect(() => {
-    if (phase !== 'appear') return;
-
     // Phase 1→2: 타일 등장 → 소거 시작
     timerRef.current = setTimeout(() => {
       setPhase('eliminate');
@@ -110,7 +75,7 @@ export const StageMatching: FC<StageMatchingProps> = ({ pendingMatches }) => {
       if (timerRef.current) clearTimeout(timerRef.current);
       clearTimeout(revealTimer);
     };
-  }, [phase]);
+  }, []);
 
   const isRevealed = phase === 'reveal';
 
@@ -145,7 +110,6 @@ export const StageMatching: FC<StageMatchingProps> = ({ pendingMatches }) => {
                 key={i}
                 className={cn(
                   'h-11 w-11 overflow-hidden rounded-lg sm:h-12 sm:w-12',
-                  phase === 'waiting' && 'opacity-0',
                   isEliminated && 'animate-tile-disappear',
                   !isEliminated && phase === 'appear' && 'animate-tile-appear',
                   !isEliminated && phase === 'eliminate' && !isCenter && 'animate-tile-pulse',

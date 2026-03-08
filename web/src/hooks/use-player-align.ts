@@ -37,19 +37,14 @@ export const usePlayerAlign = (
       setAlignedUrl(null);
 
       try {
-        // 1. 이미지 로드
-        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-          const el = new Image();
-          el.crossOrigin = 'anonymous';
-          el.onload = () => resolve(el);
-          el.onerror = reject;
-          el.src = playerImageUrl;
-        });
+        // 1. 이미지 로드 (fetch로 CORS 요청 — <img> 캐시와 충돌 방지)
+        const response = await fetch(playerImageUrl, { mode: 'cors' });
+        const blob = await response.blob();
 
         if (cancelled) return;
 
         // 2. 얼굴 검출
-        const bitmap = await createImageBitmap(img);
+        const bitmap = await createImageBitmap(blob);
         const faces = await detectFaces(bitmap);
 
         if (cancelled) return;
