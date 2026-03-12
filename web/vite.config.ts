@@ -30,8 +30,43 @@ const serveOnnxWorkers = (): Plugin => ({
   },
 })
 
+/**
+ * 개발 서버에서 /api/* 요청을 로컬 JSON 파일로 서빙한다.
+ * 프로덕션에서는 Cloudflare Pages Function이 처리.
+ */
+const serveScheduleApi = (): Plugin => ({
+  name: 'serve-schedule-api',
+  configureServer(server) {
+    server.middlewares.use((req, res, next) => {
+      if (!req.url?.startsWith('/api/')) return next()
+
+      // GET /api/today?date=2026-03-12
+      if (req.url.startsWith('/api/today')) {
+        const url = new URL(req.url, 'http://localhost')
+        const now = new Date()
+        const kstDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(now)
+        const date = url.searchParams.get('date') ?? kstDate
+
+        const schedulePath = path.resolve(__dirname, '../data/schedule/kbo_2026.json')
+        try {
+          const data = JSON.parse(fs.readFileSync(schedulePath, 'utf-8'))
+          const games = data.schedule[date] ?? []
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ date, games }))
+        } catch {
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ date, games: [], message: 'Schedule file not found' }))
+        }
+        return
+      }
+
+      next()
+    })
+  },
+})
+
 export default defineConfig({
-  plugins: [serveOnnxWorkers(), react(), tailwindcss()],
+  plugins: [serveOnnxWorkers(), serveScheduleApi(), react(), tailwindcss()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
