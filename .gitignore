@@ -26,9 +26,15 @@ web/public/images/players
 web/public/*.wasm
 web/public/*.mjs
 
+# === Admin Console ===
+admin-console/node_modules/
+admin-console/dist/
+admin-console/.vite/
+
 # === Cloudflare ===
 .wrangler/
 web/.wrangler/
+admin-console/.wrangler/
 upload-r2.sh
 
 # === OS ===

@@ -28,11 +28,11 @@ export const ResultPage: FC = () => {
 
   const handleReset = useCallback(() => {
     dispatch({ type: 'RESET' });
-    navigate('/');
+    navigate('/lookalike');
   }, [dispatch, navigate]);
 
   if (state.phase !== 'result') {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/lookalike" replace />;
   }
 
   const { matches, previewUrl, croppedFaceUrl, alignedFaceUrl, classification } = state;

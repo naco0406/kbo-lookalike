@@ -1,0 +1,8 @@
+name = "kbo-lookalike"
+compatibility_date = "2025-01-01"
+pages_build_output_dir = "./dist"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "d18842f0400443a399f685b5a0f1329f"
+preview_id = "e145b6431f504ec8a997f729fa5948b9"

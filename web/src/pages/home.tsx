@@ -29,7 +29,7 @@ export const HomePage: FC = () => {
 
   useEffect(() => {
     if (state.phase === 'result') {
-      navigate('/result');
+      navigate('/lookalike/result');
     }
   }, [state.phase, navigate]);
 
