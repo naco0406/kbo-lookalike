@@ -31,6 +31,10 @@ web/public/*.mjs
 admin-console/node_modules/
 admin-console/dist/
 admin-console/.vite/
+admin-console/.dev.vars
+
+# === Data (crawled) ===
+data/relay/
 
 # === Cloudflare ===
 .wrangler/
