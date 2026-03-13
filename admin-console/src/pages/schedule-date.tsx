@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router';
-import { ArrowLeft, Check, Loader2, Save, Trash2, X } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Check, CheckCircle2, Loader2, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fetchGames, saveGames, type Game } from '@/lib/cloudflare';
 import { TEAM_COLORS, STATUS_LABELS } from '@/constants/teams';
@@ -312,6 +312,148 @@ export const ScheduleDatePage: FC = () => {
               />
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Relay 데이터 현황 */}
+      {date && <RelayStatusPanel date={date} completedGames={games.filter((g) => g.status === 'completed')} />}
+    </div>
+  );
+};
+
+// ── Relay Status Panel ────────────────────────────────────────────────────────
+
+const RelayStatusPanel: FC<{ date: string; completedGames: Game[] }> = ({ date, completedGames }) => {
+  const [existingIds, setExistingIds] = useState<string[] | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [triggering, setTriggering] = useState(false);
+  const [triggerMsg, setTriggerMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const checkRelay = useCallback(async () => {
+    setChecking(true);
+    setTriggerMsg(null);
+    try {
+      const resp = await fetch(`/api/relay/check?date=${date}`);
+      const json = await resp.json() as { gameIds: string[] };
+      setExistingIds(json.gameIds);
+    } finally {
+      setChecking(false);
+    }
+  }, [date]);
+
+  const triggerCrawl = useCallback(async (force: boolean) => {
+    setTriggering(true);
+    setTriggerMsg(null);
+    try {
+      const resp = await fetch('/api/relay/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, force }),
+      });
+      const json = await resp.json() as { ok: boolean; error?: string };
+      setTriggerMsg(
+        json.ok
+          ? { ok: true, text: 'GitHub Actions 크롤 트리거 완료 (실행까지 수십 초 소요)' }
+          : { ok: false, text: json.error ?? 'Unknown error' },
+      );
+    } finally {
+      setTriggering(false);
+    }
+  }, [date]);
+
+  const missingIds = completedGames
+    .filter((g) => existingIds !== null && !existingIds.includes(g.id))
+    .map((g) => g.id);
+
+  return (
+    <div className="mt-6">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-[14px] font-semibold">Relay 데이터</h2>
+        <button
+          type="button"
+          onClick={checkRelay}
+          disabled={checking}
+          className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-colors hover:bg-accent disabled:opacity-50"
+        >
+          {checking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          R2 확인
+        </button>
+      </div>
+
+      {existingIds === null ? (
+        <div className="rounded-xl border bg-card px-4 py-8 text-center text-[13px] text-muted-foreground">
+          "R2 확인" 버튼을 눌러 relay 데이터 현황을 확인하세요
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border bg-card">
+          {completedGames.length === 0 ? (
+            <p className="px-4 py-6 text-center text-[13px] text-muted-foreground">완료된 경기 없음</p>
+          ) : (
+            completedGames.map((g, i) => {
+              const has = existingIds.includes(g.id);
+              return (
+                <div
+                  key={g.id}
+                  className="flex items-center gap-3 px-4 py-3"
+                  style={i > 0 ? { borderTop: '1px solid var(--border)' } : undefined}
+                >
+                  {has
+                    ? <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />
+                    : <AlertCircle className="h-4 w-4 shrink-0 text-amber-500" />
+                  }
+                  <span className="flex-1 font-mono text-[11px] text-muted-foreground">{g.id}</span>
+                  <span className="text-[12px] font-medium">{TEAM_COLORS[g.away.code]?.shortName ?? g.away.code}</span>
+                  <span className="text-[11px] text-muted-foreground/50">vs</span>
+                  <span className="text-[12px] font-medium">{TEAM_COLORS[g.home.code]?.shortName ?? g.home.code}</span>
+                  <span className={cn('ml-2 text-[11px] font-semibold', has ? 'text-green-600' : 'text-amber-600')}>
+                    {has ? '있음' : '없음'}
+                  </span>
+                </div>
+              );
+            })
+          )}
+
+          {completedGames.length > 0 && (
+            <div className="flex items-center justify-between border-t px-4 py-3">
+              <span className="text-[12px] text-muted-foreground">
+                {existingIds.length}/{completedGames.length}경기 저장됨
+                {missingIds.length > 0 && ` · ${missingIds.length}건 누락`}
+              </span>
+              <div className="flex gap-2">
+                {missingIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => triggerCrawl(false)}
+                    disabled={triggering}
+                    className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-[12px] font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    {triggering ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    누락 크롤
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => triggerCrawl(true)}
+                  disabled={triggering}
+                  className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-colors hover:bg-accent disabled:opacity-50"
+                >
+                  {triggering ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  전체 재크롤
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {triggerMsg && (
+        <div className={cn(
+          'mt-3 rounded-lg border px-4 py-2.5 text-[13px]',
+          triggerMsg.ok
+            ? 'border-green-200 bg-green-50 text-green-700'
+            : 'border-destructive/20 bg-destructive/5 text-destructive',
+        )}>
+          {triggerMsg.text}
         </div>
       )}
     </div>

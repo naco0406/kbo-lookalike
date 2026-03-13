@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { Link } from 'react-router';
-import { ChevronRight, Loader2, ScanFace, Sparkles } from 'lucide-react';
+import { CalendarDays, ChevronRight, Loader2, ScanFace, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TEAM_COLORS } from '@/constants/analysis-messages';
 import { useSchedule } from '@/hooks/use-schedule';
@@ -16,6 +16,7 @@ interface Feature {
   href: string | null;
   available: boolean;
   badge?: string;
+  fullWidth?: boolean;
 }
 
 // ── Data ─────────────────────────────────────────────────────────────────────
@@ -30,6 +31,14 @@ const FEATURES: Feature[] = [
     available: true,
   },
   {
+    id: 'schedule',
+    icon: CalendarDays,
+    title: '경기 일정',
+    description: '월별 캘린더로 KBO 전체 일정을 확인하세요',
+    href: '/schedule',
+    available: true,
+  },
+  {
     id: 'fortune',
     icon: Sparkles,
     title: '야구 운세',
@@ -37,6 +46,7 @@ const FEATURES: Feature[] = [
     href: null,
     available: false,
     badge: '출시 예정',
+    fullWidth: true,
   },
 ];
 
@@ -110,6 +120,8 @@ const GameCard: FC<{ game: ScheduleGame; delay: number }> = ({ game, delay }) =>
 };
 
 const FeatureCard: FC<{ feature: Feature; delay: number }> = ({ feature, delay }) => {
+  const colSpan = feature.fullWidth ? 'col-span-2' : '';
+
   const inner = (
     <>
       <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-foreground/[0.06]">
@@ -140,7 +152,7 @@ const FeatureCard: FC<{ feature: Feature; delay: number }> = ({ feature, delay }
     return (
       <Link
         to={feature.href}
-        className="animate-reveal-up rounded-2xl border bg-card p-4 transition-transform active:scale-[0.97]"
+        className={cn('animate-reveal-up rounded-2xl border bg-card p-4 transition-transform active:scale-[0.97]', colSpan)}
         style={{ animationDelay: `${delay}ms` }}
       >
         {inner}
@@ -150,7 +162,7 @@ const FeatureCard: FC<{ feature: Feature; delay: number }> = ({ feature, delay }
 
   return (
     <div
-      className="animate-reveal-up rounded-2xl border bg-card p-4 opacity-50"
+      className={cn('animate-reveal-up rounded-2xl border bg-card p-4 opacity-50', colSpan)}
       style={{ animationDelay: `${delay}ms` }}
     >
       {inner}
