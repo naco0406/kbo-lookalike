@@ -200,9 +200,12 @@ export const LandingPage: FC = () => {
     <div className="flex min-h-dvh flex-col">
       {/* ── Header ── */}
       <header className="sticky top-0 z-50 border-b bg-background/90 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-md items-center px-5">
-          <span className="text-[20px] font-extrabold tracking-tighter">KBO</span>
-          <span className="text-muted-foreground ml-1.5 text-[13px] font-medium">프로야구</span>
+        <div className="mx-auto flex h-14 max-w-md items-center justify-between px-5">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-[20px] font-extrabold tracking-tighter">KBO</span>
+            <span className="text-muted-foreground text-[13px] font-medium">프로야구</span>
+          </div>
+          <span className="text-muted-foreground/50 text-[11px]">kbo.naco.kr</span>
         </div>
       </header>
 
