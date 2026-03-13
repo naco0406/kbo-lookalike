@@ -334,7 +334,7 @@ const RelayStatusPanel: FC<{ date: string; completedGames: Game[] }> = ({ date, 
     setTriggerMsg(null);
     try {
       const resp = await fetch(`/api/relay/check?date=${date}`);
-      const json = await resp.json<{ gameIds: string[] }>();
+      const json = await resp.json() as { gameIds: string[] };
       setExistingIds(json.gameIds);
     } finally {
       setChecking(false);
@@ -350,7 +350,7 @@ const RelayStatusPanel: FC<{ date: string; completedGames: Game[] }> = ({ date, 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date, force }),
       });
-      const json = await resp.json<{ ok: boolean; error?: string }>();
+      const json = await resp.json() as { ok: boolean; error?: string };
       setTriggerMsg(
         json.ok
           ? { ok: true, text: 'GitHub Actions 크롤 트리거 완료 (실행까지 수십 초 소요)' }
