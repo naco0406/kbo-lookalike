@@ -4,6 +4,7 @@ data/player_images_high/
 data/player_images_gallery/
 data/embeddings/
 data/metadata/
+data/relay/
 *.onnx
 browser_models/
 
@@ -36,6 +37,7 @@ admin-console/.vite/
 web/.wrangler/
 admin-console/.wrangler/
 upload-r2.sh
+.dev.vars
 
 # === OS ===
 .DS_Store

@@ -1,4 +1,4 @@
-name = "kbo-admin"
+name = "kbo-lookalike-admin"
 compatibility_date = "2025-01-01"
 pages_build_output_dir = "./dist"
 
@@ -6,3 +6,7 @@ pages_build_output_dir = "./dist"
 binding = "KV"
 id = "d18842f0400443a399f685b5a0f1329f"
 preview_id = "e145b6431f504ec8a997f729fa5948b9"
+
+[[r2_buckets]]
+binding = "RELAY_BUCKET"
+bucket_name = "kbo-relay-data"

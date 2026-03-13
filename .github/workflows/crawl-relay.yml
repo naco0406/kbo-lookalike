@@ -1,0 +1,48 @@
+name: Crawl KBO Relay Data
+
+on:
+  schedule:
+    # 매일 01:00 KST (= UTC 16:00) — KBO 경기는 보통 22:00 KST에 종료
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '날짜 (YYYY-MM-DD). 비워두면 어제 KST 기준.'
+        required: false
+        default: ''
+      force:
+        description: '이미 저장된 경기도 재크롤'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: 'latest'
+
+      - name: Install dependencies
+        working-directory: python
+        run: uv sync
+
+      - name: Run crawler
+        working-directory: python
+        env:
+          CF_R2_ACCOUNT_ID: ${{ secrets.CF_R2_ACCOUNT_ID }}
+          CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+          CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+        run: |
+          ARGS=""
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            ARGS="$ARGS --date ${{ github.event.inputs.date }}"
+          fi
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            ARGS="$ARGS --force"
+          fi
+          uv run python crawl_relay.py $ARGS
