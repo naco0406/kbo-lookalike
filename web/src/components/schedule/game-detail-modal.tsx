@@ -445,21 +445,39 @@ const RelayTab: FC<{ relays: TextRelay[] }> = ({ relays }) => {
     return ai !== bi ? ai - bi : at - bt;
   });
 
-  const [selected, setSelected] = useState(inningKeys[0] ?? '');
+  const inningNums = Array.from(
+    new Set(inningKeys.map((k) => Number(k.split('-')[0])))
+  ).sort((a, b) => a - b);
 
+  const [selInn, setSelInn] = useState<number>(inningNums[0] ?? 1);
+  const [selHalf, setSelHalf] = useState<number>(Number(inningKeys[0]?.split('-')[1] ?? 0));
+
+  // Reset when relay data changes (new game loaded)
   useEffect(() => {
-    if (inningKeys.length > 0 && !inningKeys.includes(selected)) setSelected(inningKeys[0]);
-  }, [inningKeys, selected]);
+    if (inningKeys.length === 0) return;
+    setSelInn(Number(inningKeys[0].split('-')[0]));
+    setSelHalf(Number(inningKeys[0].split('-')[1]));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relays]);
+
+  const halvesForInn = inningKeys
+    .filter((k) => Number(k.split('-')[0]) === selInn)
+    .map((k) => Number(k.split('-')[1]));
+
+  const handleInnChange = (inn: number) => {
+    setSelInn(inn);
+    const halves = inningKeys
+      .filter((k) => Number(k.split('-')[0]) === inn)
+      .map((k) => Number(k.split('-')[1]));
+    if (halves.length > 0) setSelHalf(halves[0]);
+  };
+
+  const selected = `${selInn}-${selHalf}`;
 
   // Sort ascending by `no` for chronological display (API returns descending)
   const filtered = relays
     .filter((r) => `${r.inn}-${r.homeOrAway ?? 0}` === selected)
     .sort((a, b) => (a.no ?? 0) - (b.no ?? 0));
-
-  const inningLabel = (key: string) => {
-    const [inn, tb] = key.split('-').map(Number);
-    return `${inn}회${tb === 1 ? '말' : '초'}`;
-  };
 
   if (relays.length === 0) {
     return <div className="flex h-48 items-center justify-center"><p className="text-[13px] text-muted-foreground">중계 데이터가 없습니다</p></div>;
@@ -467,16 +485,39 @@ const RelayTab: FC<{ relays: TextRelay[] }> = ({ relays }) => {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Inning pills */}
-      <div className="shrink-0 overflow-x-auto border-b border-border/60 px-4 py-2.5 scrollbar-none">
-        <div className="flex gap-1.5">
-          {inningKeys.map((key) => (
-            <button key={key} onClick={() => setSelected(key)}
+      {/* Two-level inning navigation */}
+      <div className="shrink-0 border-b border-border/60">
+        {/* Row 1: inning numbers */}
+        <div className="flex gap-1 overflow-x-auto px-4 pt-2.5 pb-1.5 scrollbar-none">
+          {inningNums.map((inn) => (
+            <button
+              key={inn}
+              onClick={() => handleInnChange(inn)}
               className={cn(
-                'shrink-0 rounded-full px-3 py-1 text-[12px] font-medium transition-colors',
-                selected === key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
-              )}>
-              {inningLabel(key)}
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[13px] font-semibold transition-colors',
+                selInn === inn
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+              )}
+            >
+              {inn}
+            </button>
+          ))}
+        </div>
+        {/* Row 2: 초/말 toggle (only when both halves exist) */}
+        <div className="flex gap-1.5 px-4 pb-2.5">
+          {halvesForInn.map((h) => (
+            <button
+              key={h}
+              onClick={() => setSelHalf(h)}
+              className={cn(
+                'rounded-full px-3.5 py-1 text-[12px] font-medium transition-colors',
+                selHalf === h
+                  ? 'bg-foreground/[0.08] text-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {selInn}회 {h === 1 ? '말' : '초'}
             </button>
           ))}
         </div>
