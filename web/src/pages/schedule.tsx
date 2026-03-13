@@ -190,14 +190,6 @@ const GameCard: FC<{ game: ScheduleGame; delay: number; onClick?: () => void }> 
         )}
       </div>
 
-      {/* Completed — tap affordance dots */}
-      {isCompleted && (
-        <div className="flex items-center justify-center gap-[3px] border-t border-border/20 py-2">
-          <span className="h-[3px] w-[3px] rounded-full bg-foreground/15" />
-          <span className="h-[3px] w-[3px] rounded-full bg-foreground/15" />
-          <span className="h-[3px] w-[3px] rounded-full bg-foreground/15" />
-        </div>
-      )}
     </Tag>
   );
 };
