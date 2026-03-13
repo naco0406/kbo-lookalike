@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { Outlet, Link, useLocation } from 'react-router';
-import { CalendarDays, Database } from 'lucide-react';
+import { CalendarDays, Database, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
@@ -37,6 +37,14 @@ export const AdminLayout: FC = () => {
               ))}
             </nav>
           </div>
+
+          <a
+            href="/cdn-cgi/access/logout"
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            로그아웃
+          </a>
         </div>
       </header>
 
