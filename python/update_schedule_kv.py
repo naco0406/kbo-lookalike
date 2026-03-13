@@ -10,8 +10,7 @@ Usage:
     uv run python update_schedule_kv.py --dry-run             # KV에 쓰지 않고 확인만
 
 환경변수 (GitHub Actions Secrets):
-    CF_ACCOUNT_ID          — Cloudflare 계정 ID
-    CF_KV_NAMESPACE_ID     — KV 네임스페이스 ID
+    CF_R2_ACCOUNT_ID       — Cloudflare 계정 ID (R2와 공유)
     CF_API_TOKEN           — Cloudflare API 토큰 (KV 쓰기 권한)
 """
 
@@ -107,14 +106,17 @@ def transform_game(raw: dict) -> dict:
 
 # ── Cloudflare KV REST API ───────────────────────────────────────────────────
 
+KV_NAMESPACE_ID = "d18842f0400443a399f685b5a0f1329f"  # wrangler.toml과 동일
+
+
 def kv_put(key: str, value: str) -> bool:
     """Cloudflare KV REST API로 값을 쓴다."""
-    account_id = os.environ.get("CF_ACCOUNT_ID")
-    namespace_id = os.environ.get("CF_KV_NAMESPACE_ID")
+    account_id = os.environ.get("CF_R2_ACCOUNT_ID")
+    namespace_id = KV_NAMESPACE_ID
     api_token = os.environ.get("CF_API_TOKEN")
 
-    if not all([account_id, namespace_id, api_token]):
-        print("  ⚠ Cloudflare 환경변수 미설정 (CF_ACCOUNT_ID, CF_KV_NAMESPACE_ID, CF_API_TOKEN)")
+    if not all([account_id, api_token]):
+        print("  ⚠ Cloudflare 환경변수 미설정 (CF_R2_ACCOUNT_ID, CF_API_TOKEN)")
         return False
 
     url = (
