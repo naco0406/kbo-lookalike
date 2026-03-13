@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync } from 'fs';
+import { cpSync, existsSync, mkdirSync, symlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -26,3 +26,18 @@ for (const f of files) {
   }
 }
 console.log('WASM files ready');
+
+// Dev data symlinks
+const dataDir = join(root, 'public', 'data');
+if (!existsSync(dataDir)) mkdirSync(dataDir, { recursive: true });
+
+const scheduleLink = join(dataDir, 'schedule.json');
+const scheduleTarget = join(root, '..', 'data', 'schedule', 'kbo_2026.json');
+if (!existsSync(scheduleLink) && existsSync(scheduleTarget)) {
+  try {
+    symlinkSync(scheduleTarget, scheduleLink);
+    console.log('Created schedule.json symlink');
+  } catch {
+    // ignore if already exists (e.g. different link type)
+  }
+}
