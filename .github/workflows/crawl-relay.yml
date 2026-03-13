@@ -31,7 +31,7 @@ jobs:
         working-directory: python
         run: uv sync
 
-      - name: Run crawler
+      - name: Run relay crawler
         working-directory: python
         env:
           CF_R2_ACCOUNT_ID: ${{ secrets.CF_R2_ACCOUNT_ID }}
@@ -46,3 +46,16 @@ jobs:
             ARGS="$ARGS --force"
           fi
           uv run python crawl_relay.py $ARGS
+
+      - name: Update schedule KV with game results
+        working-directory: python
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          ARGS=""
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            ARGS="$ARGS --date ${{ github.event.inputs.date }}"
+          fi
+          uv run python update_schedule_kv.py $ARGS
