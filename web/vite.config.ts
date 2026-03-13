@@ -40,6 +40,21 @@ const serveScheduleApi = (): Plugin => ({
     server.middlewares.use((req, res, next) => {
       if (!req.url?.startsWith('/api/')) return next()
 
+      // GET /api/relay/:gameId
+      const relayMatch = req.url.match(/^\/api\/relay\/([^?/]+)/)
+      if (relayMatch) {
+        const gameId = relayMatch[1]
+        const filePath = path.resolve(__dirname, `../data/relay/${gameId}.json`)
+        if (fs.existsSync(filePath)) {
+          res.setHeader('Content-Type', 'application/json')
+          fs.createReadStream(filePath).pipe(res)
+        } else {
+          res.statusCode = 404
+          res.end(JSON.stringify({ error: 'Not found' }))
+        }
+        return
+      }
+
       // GET /api/today?date=2026-03-12
       if (req.url.startsWith('/api/today')) {
         const url = new URL(req.url, 'http://localhost')

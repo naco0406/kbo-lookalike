@@ -1,6 +1,6 @@
 import type { FC } from 'react';
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router';
+import { useMemo, useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router';
 import { CalendarX2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { TEAM_COLORS } from '@/constants/analysis-messages';
 import { useMonthSchedule } from '@/hooks/use-month-schedule';
 import type { ScheduleGame } from '@/hooks/use-schedule';
+import { GameDetailModal } from '@/components/schedule/game-detail-modal';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,16 @@ const getTodayStr = (): string => {
 };
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+// gameId 앞 8자리(YYYYMMDD)에서 날짜 파싱
+const parseGameDate = (gameId: string) => {
+  if (!/^\d{8}/.test(gameId)) return null;
+  const year = parseInt(gameId.slice(0, 4), 10);
+  const month = parseInt(gameId.slice(4, 6), 10) - 1; // 0-indexed
+  const day = parseInt(gameId.slice(6, 8), 10);
+  if (isNaN(year + month + day)) return null;
+  return { year, month, day };
+};
 
 // ── Team Badge ─────────────────────────────────────────────────────────────────
 
@@ -77,19 +88,24 @@ const StatusBadge: FC<{ game: ScheduleGame }> = ({ game }) => {
 
 // ── Game Card ──────────────────────────────────────────────────────────────────
 
-const GameCard: FC<{ game: ScheduleGame; delay: number }> = ({ game, delay }) => {
+const GameCard: FC<{ game: ScheduleGame; delay: number; onClick?: () => void }> = ({ game, delay, onClick }) => {
   const isLive = game.status === 'live';
+  const isCompleted = game.status === 'completed';
   const hasScore = game.awayScore !== undefined && game.homeScore !== undefined;
   const awayWon = hasScore && game.awayScore! > game.homeScore!;
   const homeWon = hasScore && game.homeScore! > game.awayScore!;
   const awayTeam = TEAM_COLORS[game.awayCode];
   const homeTeam = TEAM_COLORS[game.homeCode];
 
+  const Tag = isCompleted ? 'button' : 'div';
+
   return (
-    <div
+    <Tag
+      {...(isCompleted ? { onClick, type: 'button' as const } : {})}
       className={cn(
-        'animate-reveal-up overflow-hidden rounded-2xl border bg-card',
+        'animate-reveal-up w-full overflow-hidden rounded-2xl border bg-card text-left',
         isLive && 'border-destructive/20',
+        isCompleted && 'cursor-pointer transition-colors hover:border-border hover:bg-card/80 active:scale-[0.99]',
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
@@ -173,7 +189,14 @@ const GameCard: FC<{ game: ScheduleGame; delay: number }> = ({ game, delay }) =>
           <span className="text-[10px] text-muted-foreground/40">{game.broadcast}</span>
         )}
       </div>
-    </div>
+
+      {/* Completed — subtle tap hint */}
+      {isCompleted && (
+        <div className="flex items-center justify-center border-t border-border/30 py-1.5">
+          <span className="text-[10px] text-muted-foreground/35">상세 보기</span>
+        </div>
+      )}
+    </Tag>
   );
 };
 
@@ -370,11 +393,12 @@ const Calendar: FC<CalendarProps> = ({
 
 // ── Games Panel ────────────────────────────────────────────────────────────────
 
-const GamesPanel: FC<{ date: string; games: ScheduleGame[]; loading: boolean }> = ({
-  date,
-  games,
-  loading,
-}) => {
+const GamesPanel: FC<{
+  date: string;
+  games: ScheduleGame[];
+  loading: boolean;
+  onGameClick: (game: ScheduleGame) => void;
+}> = ({ date, games, loading, onGameClick }) => {
   const label = new Intl.DateTimeFormat('ko-KR', {
     month: 'long',
     day: 'numeric',
@@ -406,7 +430,12 @@ const GamesPanel: FC<{ date: string; games: ScheduleGame[]; loading: boolean }> 
       ) : (
         <div className="flex flex-col gap-2.5">
           {games.map((game, i) => (
-            <GameCard key={game.id} game={game} delay={i * 40} />
+            <GameCard
+              key={game.id}
+              game={game}
+              delay={i * 40}
+              onClick={game.status === 'completed' ? () => onGameClick(game) : undefined}
+            />
           ))}
         </div>
       )}
@@ -416,16 +445,67 @@ const GamesPanel: FC<{ date: string; games: ScheduleGame[]; loading: boolean }> 
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-const initial = new Date();
-
 export const SchedulePage: FC = () => {
-  const [year, setYear] = useState(initial.getFullYear());
-  const [month, setMonth] = useState(initial.getMonth());
-  const [selectedDate, setSelectedDate] = useState(getTodayStr);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // URL에 ?game=이 있으면 해당 날짜로 캘린더 초기화
+  const initialFromUrl = useMemo(() => {
+    const gameId = searchParams.get('game');
+    return gameId ? parseGameDate(gameId) : null;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 최초 마운트 시 한 번만 계산
+
+  const now = new Date();
+  const [year, setYear] = useState(initialFromUrl?.year ?? now.getFullYear());
+  const [month, setMonth] = useState(initialFromUrl?.month ?? now.getMonth());
+  const [selectedDate, setSelectedDate] = useState(() =>
+    initialFromUrl
+      ? toDateStr(initialFromUrl.year, initialFromUrl.month, initialFromUrl.day)
+      : getTodayStr(),
+  );
+  const [detailGame, setDetailGame] = useState<ScheduleGame | null>(null);
 
   const monthStr = toMonthStr(year, month);
   const { gamesByDate, loading } = useMonthSchedule(monthStr);
   const selectedGames = gamesByDate[selectedDate] ?? [];
+
+  // URL ↔ 모달 상태 동기화
+  // - searchParams 또는 gamesByDate가 바뀔 때마다 실행
+  // - 브라우저 뒤로가기로 ?game= 파라미터가 사라지면 모달 닫힘
+  // - ?game=을 포함한 URL로 직접 접근 시 데이터 로드 후 모달 자동 오픈
+  useEffect(() => {
+    const gameId = searchParams.get('game');
+
+    if (!gameId) {
+      setDetailGame((prev) => (prev !== null ? null : prev));
+      return;
+    }
+
+    setDetailGame((prev) => {
+      if (prev?.id === gameId) return prev; // 이미 열려 있음
+      for (const games of Object.values(gamesByDate)) {
+        const found = games.find((g) => g.id === gameId);
+        if (found) return found;
+      }
+      return prev; // 아직 데이터 로드 전 — 유지
+    });
+  }, [searchParams, gamesByDate]);
+
+  const handleGameClick = (game: ScheduleGame) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('game', game.id);
+      return next;
+    });
+  };
+
+  const handleClose = () => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('game');
+      return next;
+    });
+  };
 
   const goToMonth = (y: number, m: number) => {
     setYear(y);
@@ -434,9 +514,9 @@ export const SchedulePage: FC = () => {
   };
 
   const goToToday = () => {
-    const now = new Date();
-    setYear(now.getFullYear());
-    setMonth(now.getMonth());
+    const today = new Date();
+    setYear(today.getFullYear());
+    setMonth(today.getMonth());
     setSelectedDate(getTodayStr());
   };
 
@@ -458,6 +538,8 @@ export const SchedulePage: FC = () => {
         </div>
       </header>
 
+      <GameDetailModal game={detailGame} onClose={handleClose} />
+
       {/* Content */}
       <div className="mx-auto w-full max-w-md flex-1 px-5 pb-16">
         <div className="mt-5 animate-reveal-up">
@@ -477,7 +559,12 @@ export const SchedulePage: FC = () => {
             }
             onGoToToday={goToToday}
           />
-          <GamesPanel date={selectedDate} games={selectedGames} loading={loading} />
+          <GamesPanel
+            date={selectedDate}
+            games={selectedGames}
+            loading={loading}
+            onGameClick={handleGameClick}
+          />
         </div>
       </div>
     </div>
