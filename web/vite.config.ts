@@ -99,17 +99,55 @@ const serveScheduleApi = (): Plugin => ({
         return
       }
 
-      // GET /api/relay/:gameId
+      // GET /api/relay/:gameId — 로컬 파일 → 없으면 Naver game-polling 전체 이닝 fallback
       const relayMatch = req.url.match(/^\/api\/relay\/([^?/]+)/)
-      if (relayMatch) {
+      if (relayMatch && !req.url.includes('/relay/live/')) {
         const gameId = relayMatch[1]
         const filePath = path.resolve(__dirname, `../data/relay/${gameId}.json`)
         if (fs.existsSync(filePath)) {
           res.setHeader('Content-Type', 'application/json')
           fs.createReadStream(filePath).pipe(res)
         } else {
-          res.statusCode = 404
-          res.end(JSON.stringify({ error: 'Not found' }))
+          // 로컬 파일 없으면 Naver API에서 1회 데이터로 대체
+          try {
+            const naverUrl = `https://api-gw.sports.naver.com/schedule/games/${gameId}/game-polling?inning=1&isHighlight=false`
+            const resp = await fetch(naverUrl, {
+              headers: {
+                'Referer': 'https://sports.naver.com/',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+              },
+            })
+            const raw = await resp.json() as Record<string, unknown>
+            if ((raw as { code?: number }).code !== 200) {
+              res.statusCode = 404
+              res.end(JSON.stringify({ error: 'No data' }))
+              return
+            }
+            const result = (raw as { result?: Record<string, unknown> }).result ?? {}
+            const game = (result.game ?? {}) as Record<string, unknown>
+            const td = (result.textRelayData ?? {}) as Record<string, unknown>
+            const homeArr = (game.homeTeamScoreByInning ?? []) as (number | null)[]
+            const awayArr = (game.awayTeamScoreByInning ?? []) as (number | null)[]
+            const toMap = (arr: (number | null)[]) =>
+              Object.fromEntries(arr.map((s, i) => [String(i + 1), s != null ? String(s) : '-']))
+            const [hR, hH, hE, hB] = (game.homeTeamRheb ?? [0, 0, 0, 0]) as number[]
+            const [aR, aH, aE, aB] = (game.awayTeamRheb ?? [0, 0, 0, 0]) as number[]
+            const body = JSON.stringify({
+              textRelayData: {
+                gameId,
+                inningScore: { home: toMap(homeArr), away: toMap(awayArr) },
+                currentGameState: { homeScore: hR, awayScore: aR, homeHit: hH, awayHit: aH, homeError: hE, awayError: aE, homeBallFour: hB, awayBallFour: aB },
+                homeLineup: game.homeLineup ?? {},
+                awayLineup: game.awayLineup ?? {},
+                textRelays: td.textRelays ?? [],
+              },
+            })
+            res.setHeader('Content-Type', 'application/json')
+            res.end(body)
+          } catch {
+            res.statusCode = 502
+            res.end(JSON.stringify({ error: 'Upstream fetch failed' }))
+          }
         }
         return
       }
