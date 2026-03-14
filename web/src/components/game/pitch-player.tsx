@@ -325,8 +325,6 @@ export const PitchPlayer: FC<PitchPlayerProps> = ({ atBats, className }) => {
               currentPitchIndex={pitchIdx}
               phase={phase}
               progress={progress}
-              stance={pitch?.stance}
-              batterHitType={ab?.batterHitType}
             />
           </div>
         ) : (
