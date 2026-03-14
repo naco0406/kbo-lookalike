@@ -2,8 +2,8 @@ name: Crawl KBO Relay Data
 
 on:
   schedule:
-    # 매일 01:00 KST (= UTC 16:00) — KBO 경기는 보통 22:00 KST에 종료
-    - cron: '0 16 * * *'
+    # 매일 00:00 KST (= UTC 15:00) — KBO 경기는 보통 22:00 KST에 종료
+    - cron: '0 15 * * *'
   workflow_dispatch:
     inputs:
       date:
