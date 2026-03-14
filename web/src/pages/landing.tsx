@@ -1,10 +1,12 @@
 import type { FC } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router';
-import { CalendarDays, ChevronRight, Loader2, ScanFace, Sparkles } from 'lucide-react';
+import { CalendarDays, ChevronRight, Eye, Loader2, ScanFace, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TEAM_COLORS } from '@/constants/analysis-messages';
 import { useSchedule } from '@/hooks/use-schedule';
 import type { ScheduleGame } from '@/hooks/use-schedule';
+import { GameDetailModal } from '@/components/schedule/game-detail-modal';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +33,14 @@ const FEATURES: Feature[] = [
     available: true,
   },
   {
+    id: 'umpire-game',
+    icon: Eye,
+    title: '스트라이크 콜',
+    description: '심판이 되어 실제 투구를 판정해보세요',
+    href: '/umpire-game',
+    available: true,
+  },
+  {
     id: 'schedule',
     icon: CalendarDays,
     title: '경기 일정',
@@ -46,7 +56,6 @@ const FEATURES: Feature[] = [
     href: null,
     available: false,
     badge: '출시 예정',
-    fullWidth: true,
   },
 ];
 
@@ -72,13 +81,23 @@ const TeamBadge: FC<{ code: string }> = ({ code }) => {
   );
 };
 
-const GameCard: FC<{ game: ScheduleGame; delay: number }> = ({ game, delay }) => {
+const GameCard: FC<{ game: ScheduleGame; delay: number; onClick?: () => void }> = ({ game, delay, onClick }) => {
   const isLive = game.status === 'live';
+  const isClickable = game.status === 'completed' || game.status === 'live';
   const hasScore = game.awayScore !== undefined && game.homeScore !== undefined;
+  const awayWon = hasScore && Number(game.awayScore) > Number(game.homeScore);
+  const homeWon = hasScore && Number(game.homeScore) > Number(game.awayScore);
+
+  const Tag = isClickable ? 'button' : 'div';
 
   return (
-    <div
-      className="animate-reveal-up rounded-2xl border bg-card px-4 py-3"
+    <Tag
+      {...(isClickable ? { onClick, type: 'button' as const } : {})}
+      className={cn(
+        'animate-reveal-up w-full rounded-2xl border bg-card px-4 py-3 text-left',
+        isLive && 'border-destructive/20',
+        isClickable && 'cursor-pointer transition-colors hover:border-border hover:bg-card/80 active:scale-[0.99]',
+      )}
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-center gap-2">
@@ -86,12 +105,18 @@ const GameCard: FC<{ game: ScheduleGame; delay: number }> = ({ game, delay }) =>
 
         <div className="flex flex-1 flex-col items-center">
           {hasScore ? (
-            <div className="flex items-center gap-3">
-              <span className="text-[22px] font-extrabold tabular-nums leading-none">
+            <div className="grid w-full max-w-[120px] grid-cols-[1fr_auto_1fr] items-baseline">
+              <span className={cn(
+                'text-right text-[22px] font-extrabold tabular-nums leading-none',
+                hasScore && !awayWon && 'text-muted-foreground/25',
+              )}>
                 {game.awayScore}
               </span>
-              <span className="text-muted-foreground/40 font-light">:</span>
-              <span className="text-[22px] font-extrabold tabular-nums leading-none">
+              <span className="px-1.5 text-muted-foreground/30 font-light">:</span>
+              <span className={cn(
+                'text-left text-[22px] font-extrabold tabular-nums leading-none',
+                hasScore && !homeWon && 'text-muted-foreground/25',
+              )}>
                 {game.homeScore}
               </span>
             </div>
@@ -100,7 +125,7 @@ const GameCard: FC<{ game: ScheduleGame; delay: number }> = ({ game, delay }) =>
               {game.time}
             </span>
           )}
-          <div className="mt-0.5 flex items-center gap-1">
+          <div className="mt-1 flex items-center gap-1">
             {isLive && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />}
             <span
               className={cn(
@@ -115,7 +140,7 @@ const GameCard: FC<{ game: ScheduleGame; delay: number }> = ({ game, delay }) =>
 
         <TeamBadge code={game.homeCode} />
       </div>
-    </div>
+    </Tag>
   );
 };
 
@@ -179,8 +204,15 @@ const GamesSkeleton: FC = () => (
 );
 
 const NoGames: FC = () => (
-  <div className="flex flex-col items-center justify-center rounded-2xl border bg-card py-8 text-center">
+  <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border bg-card py-10 text-center">
+    <CalendarDays className="h-5 w-5 text-muted-foreground/25" />
     <p className="text-muted-foreground text-[13px]">오늘은 경기가 없습니다</p>
+    <Link
+      to="/schedule"
+      className="mt-1 text-[11px] font-medium text-primary hover:underline"
+    >
+      전체 일정 보기
+    </Link>
   </div>
 );
 
@@ -195,6 +227,7 @@ const dateLabel = new Intl.DateTimeFormat('ko-KR', {
 
 export const LandingPage: FC = () => {
   const { games, loading } = useSchedule();
+  const [detailGame, setDetailGame] = useState<ScheduleGame | null>(null);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -209,6 +242,8 @@ export const LandingPage: FC = () => {
         </div>
       </header>
 
+      <GameDetailModal game={detailGame} onClose={() => setDetailGame(null)} />
+
       {/* ── Content ── */}
       <div className="mx-auto w-full max-w-md flex-1 px-5 pb-12">
         {/* Today's schedule */}
@@ -218,7 +253,13 @@ export const LandingPage: FC = () => {
               오늘의 경기
               {loading && <Loader2 className="ml-1.5 inline-block h-3.5 w-3.5 animate-spin text-muted-foreground" />}
             </h2>
-            <span className="text-muted-foreground text-[12px]">{dateLabel}</span>
+            <Link
+              to="/schedule"
+              className="flex items-center gap-0.5 text-[12px] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <span>{dateLabel}</span>
+              <ChevronRight className="h-3 w-3" />
+            </Link>
           </div>
           {loading ? (
             <GamesSkeleton />
@@ -227,7 +268,12 @@ export const LandingPage: FC = () => {
           ) : (
             <div className="flex flex-col gap-2">
               {games.map((game, i) => (
-                <GameCard key={game.id} game={game} delay={i * 50} />
+                <GameCard
+                  key={game.id}
+                  game={game}
+                  delay={i * 50}
+                  onClick={(game.status === 'completed' || game.status === 'live') ? () => setDetailGame(game) : undefined}
+                />
               ))}
             </div>
           )}
