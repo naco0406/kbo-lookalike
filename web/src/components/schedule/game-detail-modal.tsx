@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Loader2, AlertCircle } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import { cn } from '@/lib/utils';
@@ -82,8 +82,19 @@ interface RelayData {
   textRelays?: TextRelay[];
 }
 
+interface LiveState {
+  statusCode: string;
+  currentInning: string;
+  ball: number;
+  strike: number;
+  out: number;
+  bases: [boolean, boolean, boolean];
+  relayNo: number;
+}
+
 interface RelayApiResponse {
   textRelayData: RelayData;
+  live?: LiveState;
 }
 
 // ── Scoring Play (득점 이벤트) 추출 ──────────────────────────────────────────
@@ -573,34 +584,77 @@ interface GameDetailModalProps {
   onClose: () => void;
 }
 
+const LIVE_POLL_INTERVAL = 30_000;
+
 export const GameDetailModal: FC<GameDetailModalProps> = ({ game, onClose }) => {
   const [tab, setTab] = useState<Tab>('스코어보드');
   const [data, setData] = useState<RelayData | null>(null);
+  const [liveState, setLiveState] = useState<LiveState | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const inningRef = useRef(1);
+  const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
-  const fetchRelay = useCallback(async (gameId: string) => {
-    setLoading(true);
-    setError(null);
-    setData(null);
+  const isLive = game?.status === 'live';
+
+  const fetchRelay = useCallback(async (gameId: string, live: boolean, showLoader = true) => {
+    if (showLoader) {
+      setLoading(true);
+      setError(null);
+      setData(null);
+    }
     try {
-      const resp = await fetch(`/api/relay/${gameId}`);
+      const url = live
+        ? `/api/relay/live/${gameId}?inning=${inningRef.current}`
+        : `/api/relay/${gameId}`;
+      const resp = await fetch(url);
       if (!resp.ok) throw new Error(`${resp.status}`);
       const json = await resp.json() as RelayApiResponse;
       setData(json.textRelayData);
+
+      if (json.live) {
+        setLiveState(json.live);
+        // 이닝 자동 추적
+        const match = json.live.currentInning.match(/(\d+)/);
+        if (match) {
+          const newInn = Number(match[1]);
+          if (newInn > inningRef.current) inningRef.current = newInn;
+        }
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
+      if (showLoader) setError(e instanceof Error ? e.message : 'Unknown error');
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (game) {
-      setTab('스코어보드');
-      fetchRelay(game.id);
+    if (!game) return;
+
+    setTab('스코어보드');
+    setLiveState(null);
+    inningRef.current = 1;
+
+    fetchRelay(game.id, game.status === 'live');
+
+    // 라이브 경기: 30초 폴링
+    if (game.status === 'live') {
+      timerRef.current = setInterval(() => {
+        fetchRelay(game.id, true, false);
+      }, LIVE_POLL_INTERVAL);
     }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [game, fetchRelay]);
+
+  // 경기 종료 감지 → 폴링 중단
+  useEffect(() => {
+    if (liveState?.statusCode === 'RESULT' || liveState?.statusCode === 'CANCEL') {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+  }, [liveState?.statusCode]);
 
   const scoringPlays = data?.textRelays ? extractScoringPlays(data.textRelays) : [];
 
@@ -641,27 +695,72 @@ export const GameDetailModal: FC<GameDetailModalProps> = ({ game, onClose }) => 
 
           {/* Header */}
           {game && (
-            <div className="flex shrink-0 items-center justify-between px-5 py-3">
-              <div className="flex items-center gap-2.5">
-                <span className="rounded-full px-2.5 py-1 text-[12px] font-bold text-white"
-                  style={{ backgroundColor: TEAM_COLORS[game.awayCode]?.primary ?? '#888' }}>
-                  {TEAM_COLORS[game.awayCode]?.shortName ?? game.awayCode}
-                </span>
-                <span className="text-[22px] font-black tabular-nums leading-none">{game.awayScore ?? '-'}</span>
-                <span className="text-[13px] font-light text-muted-foreground/25">:</span>
-                <span className="text-[22px] font-black tabular-nums leading-none">{game.homeScore ?? '-'}</span>
-                <span className="rounded-full px-2.5 py-1 text-[12px] font-bold text-white"
-                  style={{ backgroundColor: TEAM_COLORS[game.homeCode]?.primary ?? '#888' }}>
-                  {TEAM_COLORS[game.homeCode]?.shortName ?? game.homeCode}
-                </span>
+            <div className="shrink-0 px-5 py-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="rounded-full px-2.5 py-1 text-[12px] font-bold text-white"
+                    style={{ backgroundColor: TEAM_COLORS[game.awayCode]?.primary ?? '#888' }}>
+                    {TEAM_COLORS[game.awayCode]?.shortName ?? game.awayCode}
+                  </span>
+                  <span className="text-[22px] font-black tabular-nums leading-none">
+                    {liveState ? Number(data?.currentGameState?.awayScore ?? game.awayScore ?? 0) : (game.awayScore ?? '-')}
+                  </span>
+                  <span className="text-[13px] font-light text-muted-foreground/25">:</span>
+                  <span className="text-[22px] font-black tabular-nums leading-none">
+                    {liveState ? Number(data?.currentGameState?.homeScore ?? game.homeScore ?? 0) : (game.homeScore ?? '-')}
+                  </span>
+                  <span className="rounded-full px-2.5 py-1 text-[12px] font-bold text-white"
+                    style={{ backgroundColor: TEAM_COLORS[game.homeCode]?.primary ?? '#888' }}>
+                    {TEAM_COLORS[game.homeCode]?.shortName ?? game.homeCode}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  {isLive && liveState && (
+                    <div className="flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-destructive" />
+                      <span className="text-[10px] font-bold tracking-wide text-destructive">
+                        {liveState.currentInning || 'LIVE'}
+                      </span>
+                    </div>
+                  )}
+                  <span className="hidden text-[11px] text-muted-foreground/50 sm:block">{game.venue}</span>
+                  <DialogPrimitive.Close className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                    <X className="h-4 w-4" />
+                  </DialogPrimitive.Close>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2.5">
-                <span className="hidden text-[11px] text-muted-foreground/50 sm:block">{game.venue}</span>
-                <DialogPrimitive.Close className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                  <X className="h-4 w-4" />
-                </DialogPrimitive.Close>
-              </div>
+              {/* BSO 인디케이터 (라이브만) */}
+              {isLive && liveState && (
+                <div className="mt-2 flex items-center gap-4 text-[11px]">
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground/50">B</span>
+                    {Array.from({ length: 4 }, (_, i) => (
+                      <span key={i} className={cn('h-1.5 w-1.5 rounded-full', i < liveState.ball ? 'bg-blue-500' : 'bg-muted')} />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground/50">S</span>
+                    {Array.from({ length: 3 }, (_, i) => (
+                      <span key={i} className={cn('h-1.5 w-1.5 rounded-full', i < liveState.strike ? 'bg-amber-500' : 'bg-muted')} />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground/50">O</span>
+                    {Array.from({ length: 3 }, (_, i) => (
+                      <span key={i} className={cn('h-1.5 w-1.5 rounded-full', i < liveState.out ? 'bg-destructive' : 'bg-muted')} />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-muted-foreground/50">
+                    {['1B', '2B', '3B'].map((label, i) => (
+                      <span key={label} className={cn('text-[10px] font-medium', liveState.bases[i] && 'text-amber-500 font-bold')}>
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

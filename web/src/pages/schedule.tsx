@@ -97,15 +97,16 @@ const GameCard: FC<{ game: ScheduleGame; delay: number; onClick?: () => void }> 
   const awayTeam = TEAM_COLORS[game.awayCode];
   const homeTeam = TEAM_COLORS[game.homeCode];
 
-  const Tag = isCompleted ? 'button' : 'div';
+  const isClickable = isCompleted || isLive;
+  const Tag = isClickable ? 'button' : 'div';
 
   return (
     <Tag
-      {...(isCompleted ? { onClick, type: 'button' as const } : {})}
+      {...(isClickable ? { onClick, type: 'button' as const } : {})}
       className={cn(
         'animate-reveal-up w-full overflow-hidden rounded-2xl border bg-card text-left',
         isLive && 'border-destructive/20',
-        isCompleted && 'cursor-pointer transition-colors hover:border-border hover:bg-card/80 active:scale-[0.99]',
+        isClickable && 'cursor-pointer transition-colors hover:border-border hover:bg-card/80 active:scale-[0.99]',
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
@@ -428,7 +429,7 @@ const GamesPanel: FC<{
               key={game.id}
               game={game}
               delay={i * 40}
-              onClick={game.status === 'completed' ? () => onGameClick(game) : undefined}
+              onClick={game.status === 'completed' || game.status === 'live' ? () => onGameClick(game) : undefined}
             />
           ))}
         </div>
