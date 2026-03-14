@@ -5,6 +5,7 @@ import { LandingPage } from '@/pages/landing';
 import { HomePage } from '@/pages/home';
 import { ResultPage } from '@/pages/result';
 import { SchedulePage } from '@/pages/schedule';
+import { UmpireGamePage } from '@/pages/umpire-game';
 
 export const router = createBrowserRouter([
   {
@@ -12,6 +13,7 @@ export const router = createBrowserRouter([
     children: [
       { path: '/', element: <LandingPage /> },
       { path: '/schedule', element: <SchedulePage /> },
+      { path: '/umpire-game', element: <UmpireGamePage /> },
     ],
   },
   {
