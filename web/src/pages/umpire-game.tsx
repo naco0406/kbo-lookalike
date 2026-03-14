@@ -97,13 +97,18 @@ const formatInningLabel = (key: string): string => {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+/** KST 기준 "YYYY-MM-DD" 문자열을 반환한다. */
+const toKSTDateString = (date: Date): string => {
+  return date.toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
+};
+
 const generateDates = (): string[] => {
   const dates: string[] = [];
   const now = new Date();
   for (let i = 0; i <= 6; i++) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
-    dates.push(d.toISOString().slice(0, 10));
+    dates.push(toKSTDateString(d));
   }
   return dates;
 };
