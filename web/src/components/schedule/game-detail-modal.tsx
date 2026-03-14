@@ -1,10 +1,16 @@
 import type { FC } from 'react';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { X, Loader2, AlertCircle } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import { cn } from '@/lib/utils';
 import { TEAM_COLORS } from '@/constants/analysis-messages';
 import type { ScheduleGame } from '@/hooks/use-schedule';
+import type { RawTextRelay, ParsedAtBat } from '@/components/game/pitch-utils';
+import { parseAtBats } from '@/components/game/pitch-utils';
+import { AtBatCard } from '@/components/game/at-bat-card';
+import { PitchPlayer } from '@/components/game/pitch-player';
+import { WinProbabilityChart } from '@/components/game/win-probability-chart';
+import { BaseDiamond } from '@/components/game/base-diamond';
 
 // ── API Types ─────────────────────────────────────────────────────────────────
 
@@ -150,38 +156,35 @@ const extractScoringPlays = (relays: TextRelay[]): ScoringPlay[] => {
 const dash = (v: string | number | undefined | null) =>
   v !== undefined && v !== null && v !== '' ? String(v) : '-';
 
-const PITCH_LABEL: Record<string, string> = {
-  B: '볼', S: '헛스윙', T: '스트라이크', F: '파울', H: '타격',
-};
-const PITCH_COLOR: Record<string, string> = {
-  B: 'text-blue-500',
-  S: 'text-destructive',
-  T: 'text-amber-500 dark:text-amber-400',
-  F: 'text-muted-foreground',
-  H: 'text-green-600 dark:text-green-400',
-};
 
 // ── Tab Bar ───────────────────────────────────────────────────────────────────
 
-const TABS = ['스코어보드', '득점', '박스스코어', '투구 중계'] as const;
+const TABS = ['스코어보드', '득점', '박스스코어', '투구 중계', '투구 재생'] as const;
 type Tab = (typeof TABS)[number];
 
 const TabBar: FC<{ active: Tab; onChange: (t: Tab) => void }> = ({ active, onChange }) => (
-  <div className="flex shrink-0 overflow-x-auto border-b border-border/60 scrollbar-none">
-    {TABS.map((t) => (
-      <button
-        key={t}
-        onClick={() => onChange(t)}
-        className={cn(
-          'shrink-0 px-4 py-3 text-[13px] font-medium transition-colors',
-          active === t
-            ? 'border-b-2 border-primary text-foreground'
-            : 'text-muted-foreground hover:text-foreground',
-        )}
-      >
-        {t}
-      </button>
-    ))}
+  <div className="relative shrink-0 border-b border-border/60">
+    <div className="flex overflow-x-auto scrollbar-none">
+      {TABS.map((t) => (
+        <button
+          key={t}
+          onClick={() => onChange(t)}
+          className={cn(
+            'relative shrink-0 px-3.5 py-3 text-[12px] font-medium transition-colors',
+            active === t
+              ? 'text-foreground'
+              : 'text-muted-foreground/60 hover:text-foreground',
+          )}
+        >
+          {t}
+          {active === t && (
+            <span className="absolute inset-x-1.5 bottom-0 h-[2px] rounded-full bg-primary" />
+          )}
+        </button>
+      ))}
+    </div>
+    {/* Right fade hint for scrollable tabs */}
+    <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent md:hidden" />
   </div>
 );
 
@@ -191,7 +194,8 @@ const ScoreboardTab: FC<{
   game: ScheduleGame;
   inningScore: InningScore | undefined;
   gs: GameState | undefined;
-}> = ({ game, inningScore, gs }) => {
+  atBats: ParsedAtBat[];
+}> = ({ game, inningScore, gs, atBats }) => {
   const awayTeam = TEAM_COLORS[game.awayCode];
   const homeTeam = TEAM_COLORS[game.homeCode];
 
@@ -280,6 +284,22 @@ const ScoreboardTab: FC<{
           </tbody>
         </table>
       </div>
+
+      {/* Win Probability Chart */}
+      {atBats.some(ab => ab.homeWinRate !== null) && (
+        <div className="mt-6">
+          <h3 className="mb-2 text-[12px] font-semibold text-muted-foreground/60">승리 확률 그래프</h3>
+          <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/50 p-2">
+            <WinProbabilityChart
+              atBats={atBats}
+              homeTeamName={homeTeam?.shortName ?? game.homeCode}
+              awayTeamName={awayTeam?.shortName ?? game.awayCode}
+              homeColor={homeTeam?.primary ?? '#4ade80'}
+              awayColor={awayTeam?.primary ?? '#60a5fa'}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -385,7 +405,7 @@ const BatterTable: FC<{ label: string; color: string; batters: LineupBatter[] }>
                 <td key={vi} className="px-2 py-2.5 text-center tabular-nums whitespace-nowrap">{dash(v)}</td>
               ))}
               <td className="px-2 py-2.5 text-center tabular-nums text-muted-foreground/60 whitespace-nowrap">
-                {b.todayHra !== undefined ? b.todayHra.toFixed(3) : '-'}
+                {b.todayHra != null ? Number(b.todayHra).toFixed(3) : '-'}
               </td>
             </tr>
           ))}
@@ -419,7 +439,7 @@ const PitcherTable: FC<{ label: string; color: string; pitchers: LineupPitcher[]
                 <td key={vi} className="px-2 py-2.5 text-center tabular-nums whitespace-nowrap">{dash(v)}</td>
               ))}
               <td className="px-2 py-2.5 text-center tabular-nums text-muted-foreground/60 whitespace-nowrap">
-                {p.todayEra !== undefined ? p.todayEra.toFixed(2) : '-'}
+                {p.todayEra != null ? Number(p.todayEra).toFixed(2) : '-'}
               </td>
             </tr>
           ))}
@@ -445,7 +465,7 @@ const BoxScoreTab: FC<{ game: ScheduleGame; data: RelayData }> = ({ game, data }
   );
 };
 
-// ── Relay Tab ─────────────────────────────────────────────────────────────────
+// ── Relay Tab (Enhanced with Strike Zone + AtBat Cards) ──────────────────────
 
 const RelayTab: FC<{ relays: TextRelay[] }> = ({ relays }) => {
   const inningKeys = Array.from(
@@ -463,7 +483,6 @@ const RelayTab: FC<{ relays: TextRelay[] }> = ({ relays }) => {
   const [selInn, setSelInn] = useState<number>(inningNums[0] ?? 1);
   const [selHalf, setSelHalf] = useState<number>(Number(inningKeys[0]?.split('-')[1] ?? 0));
 
-  // Reset when relay data changes (new game loaded)
   useEffect(() => {
     if (inningKeys.length === 0) return;
     setSelInn(Number(inningKeys[0].split('-')[0]));
@@ -485,10 +504,21 @@ const RelayTab: FC<{ relays: TextRelay[] }> = ({ relays }) => {
 
   const selected = `${selInn}-${selHalf}`;
 
-  // Sort ascending by `no` for chronological display (API returns descending)
+  // 선택된 이닝의 relay를 시간순 정렬 후 AtBat 파싱
   const filtered = relays
     .filter((r) => `${r.inn}-${r.homeOrAway ?? 0}` === selected)
     .sort((a, b) => (a.no ?? 0) - (b.no ?? 0));
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const atBats = useMemo(
+    () => parseAtBats(filtered as unknown as RawTextRelay[]),
+    [selected, relays],
+  );
+
+  // 타석이 아닌 이벤트 (이닝 시작, 선수 교체 등)
+  const nonBatEvents = filtered
+    .filter(r => !r.textOptions?.some(to => to.type === 8))
+    .flatMap(r => (r.textOptions ?? []).filter(to => to.text && [0, 2, 7].includes(to.type ?? -1)));
 
   if (relays.length === 0) {
     return <div className="flex h-48 items-center justify-center"><p className="text-[13px] text-muted-foreground">중계 데이터가 없습니다</p></div>;
@@ -496,18 +526,18 @@ const RelayTab: FC<{ relays: TextRelay[] }> = ({ relays }) => {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Two-level inning navigation */}
-      <div className="shrink-0 border-b border-border/60">
-        {/* Row 1: inning numbers */}
-        <div className="flex gap-1 overflow-x-auto px-4 pt-2.5 pb-1.5 scrollbar-none">
+      {/* Inning navigation */}
+      <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-sm">
+        {/* 이닝 번호 */}
+        <div className="flex gap-0.5 overflow-x-auto px-3 pt-2.5 pb-1 scrollbar-none">
           {inningNums.map((inn) => (
             <button
               key={inn}
               onClick={() => handleInnChange(inn)}
               className={cn(
-                'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[13px] font-semibold transition-colors',
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[13px] font-semibold transition-all active:scale-95',
                 selInn === inn
-                  ? 'bg-primary text-primary-foreground'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground',
               )}
             >
@@ -515,63 +545,64 @@ const RelayTab: FC<{ relays: TextRelay[] }> = ({ relays }) => {
             </button>
           ))}
         </div>
-        {/* Row 2: 초/말 toggle (only when both halves exist) */}
-        <div className="flex gap-1.5 px-4 pb-2.5">
+
+        {/* 초/말 선택 */}
+        <div className="flex gap-1 px-3 pb-2">
           {halvesForInn.map((h) => (
             <button
               key={h}
               onClick={() => setSelHalf(h)}
               className={cn(
-                'rounded-full px-3.5 py-1 text-[12px] font-medium transition-colors',
+                'rounded-full px-3.5 py-1 text-[12px] font-medium transition-all active:scale-95',
                 selHalf === h
-                  ? 'bg-foreground/[0.08] text-foreground'
-                  : 'text-muted-foreground hover:text-foreground',
+                  ? 'bg-foreground/[0.07] text-foreground'
+                  : 'text-muted-foreground/60 hover:text-foreground',
               )}
             >
-              {selInn}회 {h === 1 ? '말' : '초'}
+              {h === 1 ? '말' : '초'}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex-1 space-y-2.5 overflow-y-auto p-4 md:p-5">
-        {filtered.map((relay, ri) => {
-          if (relay.titleStyle === '99') return null;
-          const opts = relay.textOptions ?? [];
-          const pitches = opts.filter((o) => o.type === 1);
-          const events = opts.filter((o) => o.type !== 1 && o.type !== 8 && o.text);
-          const header = opts.find((o) => o.type === 8);
+      {/* AtBat Cards */}
+      <div className="flex-1 space-y-2.5 overflow-y-auto p-3 md:p-4">
+        {/* 이닝 시작 이벤트 */}
+        {nonBatEvents.filter(e => e.type === 0).map((e, i) => (
+          <div key={`start-${i}`} className="py-1 text-center text-[11px] font-medium text-muted-foreground/35">
+            {e.text}
+          </div>
+        ))}
 
-          return (
-            <div key={ri} className="overflow-hidden rounded-2xl border border-border/50 bg-card">
-              <div className="border-b border-border/40 bg-muted/20 px-3.5 py-2.5">
-                <span className="text-[12px] font-semibold">{header?.text ?? relay.title ?? ''}</span>
+        {atBats.length > 0 ? (
+          atBats.map((ab, i) => (
+            <AtBatCard key={i} atBat={ab} defaultExpanded={atBats.length <= 3 || i === atBats.length - 1} />
+          ))
+        ) : (
+          /* 타석 데이터 없음 → 텍스트 뷰 fallback */
+          filtered.map((relay, ri) => {
+            if (relay.titleStyle === '99') return null;
+            const opts = relay.textOptions ?? [];
+            const events = opts.filter((o) => o.text);
+            return (
+              <div key={ri} className="overflow-hidden rounded-xl border border-border/50 bg-card">
+                {events.map((e, ei) => (
+                  <div key={ei} className="border-t border-border/30 px-3.5 py-2 first:border-t-0">
+                    <span className="text-[12px] text-muted-foreground">{e.text}</span>
+                  </div>
+                ))}
               </div>
+            );
+          })
+        )}
 
-              {pitches.length > 0 && (
-                <div className="divide-y divide-border/30">
-                  {pitches.map((p, pi) => (
-                    <div key={pi} className="flex items-center gap-3 px-3.5 py-2">
-                      <span className="w-4 text-right text-[11px] tabular-nums text-muted-foreground/30">{p.pitchNum ?? pi + 1}</span>
-                      <span className={cn('w-16 text-[11px] font-semibold', PITCH_COLOR[p.pitchResult ?? ''] ?? 'text-muted-foreground')}>
-                        {PITCH_LABEL[p.pitchResult ?? ''] ?? p.pitchResult ?? '-'}
-                      </span>
-                      <span className="w-14 text-[11px] text-muted-foreground/70">{p.stuff ?? ''}</span>
-                      <span className="text-[11px] tabular-nums text-muted-foreground/60">{p.speed ? `${p.speed}km/h` : ''}</span>
-                      {p.text && <span className="flex-1 truncate text-[11px] text-muted-foreground/50">{p.text}</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {events.map((e, ei) => (
-                <div key={`ev-${ei}`} className="border-t border-border/30 bg-muted/10 px-3.5 py-2">
-                  <span className="text-[12px] text-muted-foreground">{e.text}</span>
-                </div>
-              ))}
-            </div>
-          );
-        })}
+        {/* 교체 이벤트 */}
+        {nonBatEvents.filter(e => e.type === 2).map((e, i) => (
+          <div key={`sub-${i}`} className="flex items-center gap-2 rounded-lg bg-muted/25 px-3 py-1.5">
+            <span className="rounded-sm bg-muted/60 px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground/50">교체</span>
+            <span className="text-[11px] text-muted-foreground/60">{e.text}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -658,6 +689,17 @@ export const GameDetailModal: FC<GameDetailModalProps> = ({ game, onClose }) => 
 
   const scoringPlays = data?.textRelays ? extractScoringPlays(data.textRelays) : [];
 
+  const allAtBats = useMemo(
+    () => data?.textRelays
+      ? parseAtBats(
+          data.textRelays
+            .slice()
+            .sort((a, b) => (a.no ?? 0) - (b.no ?? 0)) as unknown as RawTextRelay[],
+        )
+      : [],
+    [data?.textRelays],
+  );
+
   return (
     <DialogPrimitive.Root open={!!game} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogPrimitive.Portal>
@@ -731,34 +773,15 @@ export const GameDetailModal: FC<GameDetailModalProps> = ({ game, onClose }) => 
                 </div>
               </div>
 
-              {/* BSO 인디케이터 (라이브만) */}
+              {/* BSO + 베이스 다이아몬드 (라이브만) */}
               {isLive && liveState && (
-                <div className="mt-2 flex items-center gap-4 text-[11px]">
-                  <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground/50">B</span>
-                    {Array.from({ length: 4 }, (_, i) => (
-                      <span key={i} className={cn('h-1.5 w-1.5 rounded-full', i < liveState.ball ? 'bg-blue-500' : 'bg-muted')} />
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground/50">S</span>
-                    {Array.from({ length: 3 }, (_, i) => (
-                      <span key={i} className={cn('h-1.5 w-1.5 rounded-full', i < liveState.strike ? 'bg-amber-500' : 'bg-muted')} />
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground/50">O</span>
-                    {Array.from({ length: 3 }, (_, i) => (
-                      <span key={i} className={cn('h-1.5 w-1.5 rounded-full', i < liveState.out ? 'bg-destructive' : 'bg-muted')} />
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-muted-foreground/50">
-                    {['1B', '2B', '3B'].map((label, i) => (
-                      <span key={label} className={cn('text-[10px] font-medium', liveState.bases[i] && 'text-amber-500 font-bold')}>
-                        {label}
-                      </span>
-                    ))}
-                  </div>
+                <div className="mt-2 flex justify-center">
+                  <BaseDiamond
+                    bases={liveState.bases}
+                    ball={liveState.ball}
+                    strike={liveState.strike}
+                    out={liveState.out}
+                  />
                 </div>
               )}
             </div>
@@ -768,7 +791,10 @@ export const GameDetailModal: FC<GameDetailModalProps> = ({ game, onClose }) => 
           <TabBar active={tab} onChange={setTab} />
 
           {/* Body */}
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className={cn(
+            'min-h-0 flex-1',
+            tab === '투구 재생' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto',
+          )}>
             {loading && (
               <div className="flex h-48 items-center justify-center gap-2 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -784,10 +810,11 @@ export const GameDetailModal: FC<GameDetailModalProps> = ({ game, onClose }) => 
             )}
             {!loading && !error && data && game && (
               <>
-                {tab === '스코어보드' && <ScoreboardTab game={game} inningScore={data.inningScore} gs={data.currentGameState} />}
+                {tab === '스코어보드' && <ScoreboardTab game={game} inningScore={data.inningScore} gs={data.currentGameState} atBats={allAtBats} />}
                 {tab === '득점' && <ScoringTab game={game} plays={scoringPlays} />}
                 {tab === '박스스코어' && <BoxScoreTab game={game} data={data} />}
                 {tab === '투구 중계' && <RelayTab relays={data.textRelays ?? []} />}
+                {tab === '투구 재생' && <PitchPlayer atBats={allAtBats} />}
               </>
             )}
           </div>
