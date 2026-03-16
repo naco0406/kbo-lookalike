@@ -162,7 +162,7 @@ const serveScheduleApi = (): Plugin => ({
 
         // 오늘 날짜: Naver Schedule API 프록시 (실시간 상태 반영)
         if (isToday) {
-          const STATUS_MAP: Record<string, string> = { BEFORE: 'upcoming', LIVE: 'live', STARTED: 'live', RESULT: 'completed' }
+          const STATUS_MAP: Record<string, string> = { BEFORE: 'upcoming', LIVE: 'live', STARTED: 'live', RESULT: 'completed', ENDED: 'completed' }
           const naverParams = new URLSearchParams({
             fields: 'basic,schedule,baseball,manualRelayUrl',
             upperCategoryId: 'kbaseball', categoryId: 'kbo',

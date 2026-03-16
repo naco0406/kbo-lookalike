@@ -687,7 +687,7 @@ export const GameDetailModal: FC<GameDetailModalProps> = ({ game, onClose }) => 
 
   // 경기 종료 감지 → 폴링 중단
   useEffect(() => {
-    if (liveState?.statusCode === 'RESULT' || liveState?.statusCode === 'CANCEL') {
+    if (liveState?.statusCode === 'RESULT' || liveState?.statusCode === 'ENDED' || liveState?.statusCode === 'CANCEL') {
       if (timerRef.current) clearInterval(timerRef.current);
     }
   }, [liveState?.statusCode]);

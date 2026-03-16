@@ -26,6 +26,7 @@ const STATUS_MAP: Record<string, string> = {
   LIVE: 'live',
   STARTED: 'live',
   RESULT: 'completed',
+  ENDED: 'completed',
 };
 
 const toKSTDateString = (): string => {
