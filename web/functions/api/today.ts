@@ -24,6 +24,7 @@ const NAVER_HEADERS = {
 const STATUS_MAP: Record<string, string> = {
   BEFORE: 'upcoming',
   LIVE: 'live',
+  STARTED: 'live',
   RESULT: 'completed',
 };
 
