@@ -159,13 +159,17 @@ const dash = (v: string | number | undefined | null) =>
 
 // ── Tab Bar ───────────────────────────────────────────────────────────────────
 
-const TABS = ['스코어보드', '득점', '박스스코어', '투구 중계', '투구 재생'] as const;
-type Tab = (typeof TABS)[number];
+const ALL_TABS = ['스코어보드', '득점', '박스스코어', '투구 중계', '투구 재생'] as const;
+// TODO: 라이브 경기 — game-polling API가 이닝별 relay만 반환하고 라인업이 없어서
+// 득점/박스스코어/투구 중계/재생이 불완전함.
+// /record API 통합 + 이닝별 relay 누적 구현 후 라이브 탭 확장.
+const LIVE_TABS = ['스코어보드'] as const;
+type Tab = (typeof ALL_TABS)[number];
 
-const TabBar: FC<{ active: Tab; onChange: (t: Tab) => void }> = ({ active, onChange }) => (
+const TabBar: FC<{ active: Tab; onChange: (t: Tab) => void; tabs: readonly Tab[] }> = ({ active, onChange, tabs }) => (
   <div className="relative shrink-0 border-b border-border/60">
     <div className="flex overflow-x-auto scrollbar-none">
-      {TABS.map((t) => (
+      {tabs.map((t) => (
         <button
           key={t}
           onClick={() => onChange(t)}
@@ -195,7 +199,8 @@ const ScoreboardTab: FC<{
   inningScore: InningScore | undefined;
   gs: GameState | undefined;
   atBats: ParsedAtBat[];
-}> = ({ game, inningScore, gs, atBats }) => {
+  isLive?: boolean;
+}> = ({ game, inningScore, gs, atBats, isLive }) => {
   const awayTeam = TEAM_COLORS[game.awayCode];
   const homeTeam = TEAM_COLORS[game.homeCode];
 
@@ -285,8 +290,8 @@ const ScoreboardTab: FC<{
         </table>
       </div>
 
-      {/* Win Probability Chart */}
-      {atBats.some(ab => ab.homeWinRate !== null) && (
+      {/* Win Probability Chart — 라이브 경기는 데이터 불완전하므로 숨김 */}
+      {!isLive && atBats.some(ab => ab.homeWinRate !== null) && (
         <div className="mt-6">
           <h3 className="mb-2 text-[12px] font-semibold text-muted-foreground/60">승리 확률 그래프</h3>
           <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/50 p-2">
@@ -788,7 +793,7 @@ export const GameDetailModal: FC<GameDetailModalProps> = ({ game, onClose }) => 
           )}
 
           {/* Tabs */}
-          <TabBar active={tab} onChange={setTab} />
+          <TabBar active={tab} onChange={setTab} tabs={isLive ? LIVE_TABS : ALL_TABS} />
 
           {/* Body */}
           <div className={cn(
@@ -810,7 +815,7 @@ export const GameDetailModal: FC<GameDetailModalProps> = ({ game, onClose }) => 
             )}
             {!loading && !error && data && game && (
               <>
-                {tab === '스코어보드' && <ScoreboardTab game={game} inningScore={data.inningScore} gs={data.currentGameState} atBats={allAtBats} />}
+                {tab === '스코어보드' && <ScoreboardTab game={game} inningScore={data.inningScore} gs={data.currentGameState} atBats={allAtBats} isLive={isLive} />}
                 {tab === '득점' && <ScoringTab game={game} plays={scoringPlays} />}
                 {tab === '박스스코어' && <BoxScoreTab game={game} data={data} />}
                 {tab === '투구 중계' && <RelayTab relays={data.textRelays ?? []} />}
