@@ -135,6 +135,7 @@ const serveScheduleApi = (): Plugin => ({
             const body = JSON.stringify({
               textRelayData: {
                 gameId,
+                partial: true,
                 inningScore: { home: toMap(homeArr), away: toMap(awayArr) },
                 currentGameState: { homeScore: hR, awayScore: aR, homeHit: hH, awayHit: aH, homeError: hE, awayError: aE, homeBallFour: hB, awayBallFour: aB },
                 homeLineup: game.homeLineup ?? {},

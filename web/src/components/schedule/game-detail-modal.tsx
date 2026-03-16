@@ -81,6 +81,8 @@ interface TextRelay {
 
 interface RelayData {
   gameId?: string;
+  /** Naver fallback 응답 (R2에 전체 relay가 없을 때) — 스코어보드만 신뢰 가능 */
+  partial?: boolean;
   inningScore?: InningScore;
   currentGameState?: GameState;
   homeLineup?: { batter?: LineupBatter[]; pitcher?: LineupPitcher[] };
@@ -792,8 +794,11 @@ export const GameDetailModal: FC<GameDetailModalProps> = ({ game, onClose }) => 
             </div>
           )}
 
-          {/* Tabs */}
-          <TabBar active={tab} onChange={setTab} tabs={isLive ? LIVE_TABS : ALL_TABS} />
+          {/* Tabs — 라이브 or 불완전 데이터(R2 미수집)일 때 스코어보드만 */}
+          {(() => {
+            const scoreOnly = isLive || !!data?.partial;
+            return <TabBar active={tab} onChange={setTab} tabs={scoreOnly ? LIVE_TABS : ALL_TABS} />;
+          })()}
 
           {/* Body */}
           <div className={cn(
@@ -815,7 +820,7 @@ export const GameDetailModal: FC<GameDetailModalProps> = ({ game, onClose }) => 
             )}
             {!loading && !error && data && game && (
               <>
-                {tab === '스코어보드' && <ScoreboardTab game={game} inningScore={data.inningScore} gs={data.currentGameState} atBats={allAtBats} isLive={isLive} />}
+                {tab === '스코어보드' && <ScoreboardTab game={game} inningScore={data.inningScore} gs={data.currentGameState} atBats={allAtBats} isLive={isLive || !!data.partial} />}
                 {tab === '득점' && <ScoringTab game={game} plays={scoringPlays} />}
                 {tab === '박스스코어' && <BoxScoreTab game={game} data={data} />}
                 {tab === '투구 중계' && <RelayTab relays={data.textRelays ?? []} />}
