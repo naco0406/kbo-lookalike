@@ -23,11 +23,11 @@ export const useTheme = () => {
     } else {
       root.classList.remove('dark');
     }
-    // Update theme-color meta
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) {
-      meta.setAttribute('content', theme === 'dark' ? '#1c2b3a' : '#f5f2ec');
-    }
+    // Update theme-color meta (light & dark 두 개 모두)
+    const color = theme === 'dark' ? '#1c2b3a' : '#f5f2ec';
+    document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+      meta.setAttribute('content', color);
+    });
   }, [theme]);
 
   const setTheme = useCallback(

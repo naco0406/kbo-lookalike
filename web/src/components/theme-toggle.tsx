@@ -11,8 +11,8 @@ export const ThemeToggle: FC<{ className?: string }> = ({ className }) => {
     <button
       onClick={toggle}
       className={cn(
-        'relative flex h-8 w-8 items-center justify-center rounded-full',
-        'text-muted-foreground transition-colors hover:text-foreground',
+        'relative flex h-11 w-11 items-center justify-center rounded-full',
+        'text-muted-foreground transition-colors hover:text-foreground active:scale-90',
         className,
       )}
       aria-label={isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}

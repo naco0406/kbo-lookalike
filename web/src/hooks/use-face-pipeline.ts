@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useAppState, useAppDispatch } from '@/context/app-state-context';
 import { runPipeline } from '@/ml/pipeline';
 import { imageDataToUrl } from '@/ml/face-crop';
@@ -22,14 +22,26 @@ const MIN_TOTAL_MS = 12000;
 const getGroupIndex = (step: PipelineStep): number =>
   CONSOLIDATED_GROUPS.findIndex((g) => g.includes(step));
 
-const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const delay = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) { reject(new DOMException('Aborted', 'AbortError')); return; }
+    const id = setTimeout(resolve, ms);
+    signal?.addEventListener('abort', () => { clearTimeout(id); reject(new DOMException('Aborted', 'AbortError')); }, { once: true });
+  });
 
 export const useFacePipeline = () => {
   const state = useAppState();
   const dispatch = useAppDispatch();
+  const abortRef = useRef<AbortController | null>(null);
 
   /** 핵심 분석 로직 — bitmap을 직접 받아 파이프라인 실행 */
   const runAnalysis = useCallback(async (bitmap: ImageBitmap) => {
+    // 이전 실행 중단
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const { signal } = controller;
+
     dispatch({ type: 'START_ANALYSIS' });
     const startedAt = Date.now();
 
@@ -40,11 +52,16 @@ export const useFacePipeline = () => {
         if (step !== 'done') collectedSteps.push(step);
       });
 
+      // 취소 확인
+      if (signal.aborted) return;
+
       // 2) 워터폴 replay — 통합 단계별 최소 표시 시간 보장
       let currentGroup = -1;
       let groupEnteredAt = Date.now();
 
       for (const step of collectedSteps) {
+        if (signal.aborted) return;
+
         const group = getGroupIndex(step);
 
         if (group !== currentGroup) {
@@ -53,7 +70,7 @@ export const useFacePipeline = () => {
             const minMs = MIN_GROUP_MS[currentGroup] ?? 600;
             const elapsed = Date.now() - groupEnteredAt;
             if (elapsed < minMs) {
-              await delay(minMs - elapsed);
+              await delay(minMs - elapsed, signal);
             }
           }
           currentGroup = group;
@@ -84,6 +101,8 @@ export const useFacePipeline = () => {
         dispatch({ type: 'UPDATE_STEP', step, payload });
       }
 
+      if (signal.aborted) return;
+
       // 3) 마지막 단계도 최소 시간 보장 + 전체 최소 시간 보장
       const lastGroupMin = MIN_GROUP_MS[currentGroup] ?? 600;
       const lastGroupElapsed = Date.now() - groupEnteredAt;
@@ -94,8 +113,10 @@ export const useFacePipeline = () => {
         MIN_TOTAL_MS - totalElapsed,
       );
       if (remaining > 0) {
-        await delay(remaining);
+        await delay(remaining, signal);
       }
+
+      if (signal.aborted) return;
 
       const alignedFaceUrl = imageDataToUrl(res.alignedFace);
 
@@ -107,6 +128,9 @@ export const useFacePipeline = () => {
         classification: res.classification,
       });
     } catch (e) {
+      // AbortError는 정상 취소 — 무시
+      if (e instanceof DOMException && e.name === 'AbortError') return;
+
       console.error('[FacePipeline] Error:', e);
       let errorType: ErrorType = 'UNKNOWN';
       if (e instanceof Error) {
@@ -141,9 +165,18 @@ export const useFacePipeline = () => {
     [dispatch, runAnalysis],
   );
 
-  const reset = useCallback(() => {
+  /** 분석 취소 → idle 복귀 */
+  const cancel = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
     dispatch({ type: 'RESET' });
   }, [dispatch]);
 
-  return { state, run, selectImage, selectAndRun, reset };
+  const reset = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    dispatch({ type: 'RESET' });
+  }, [dispatch]);
+
+  return { state, run, selectImage, selectAndRun, cancel, reset };
 };

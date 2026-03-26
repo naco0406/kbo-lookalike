@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useDragToDismiss } from '@/hooks/use-drag-to-dismiss';
 import { X, Loader2, AlertCircle } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import { cn } from '@/lib/utils';
@@ -632,6 +633,9 @@ export const GameDetailModal: FC<GameDetailModalProps> = ({ game, onClose }) => 
   const [error, setError] = useState<string | null>(null);
   const inningRef = useRef(1);
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useDragToDismiss(sheetRef, onClose, { scrollRef });
 
   const isLive = game?.status === 'live';
 
@@ -719,7 +723,7 @@ export const GameDetailModal: FC<GameDetailModalProps> = ({ game, onClose }) => 
         )} />
 
         {/* Sheet / Modal */}
-        <DialogPrimitive.Content className={cn(
+        <DialogPrimitive.Content ref={sheetRef} className={cn(
           'fixed z-50 flex flex-col bg-background shadow-2xl outline-none',
           // ── 모바일: 하단 전체 시트 ──
           'inset-x-0 bottom-0 h-[92dvh] rounded-t-3xl border border-b-0 border-border/60',
@@ -774,8 +778,10 @@ export const GameDetailModal: FC<GameDetailModalProps> = ({ game, onClose }) => 
                     </div>
                   )}
                   <span className="hidden text-[11px] text-muted-foreground/50 sm:block">{game.venue}</span>
-                  <DialogPrimitive.Close className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                    <X className="h-4 w-4" />
+                  <DialogPrimitive.Close className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors active:scale-90">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 transition-colors hover:bg-muted hover:text-foreground">
+                      <X className="h-4 w-4" />
+                    </span>
                   </DialogPrimitive.Close>
                 </div>
               </div>
@@ -801,7 +807,7 @@ export const GameDetailModal: FC<GameDetailModalProps> = ({ game, onClose }) => 
           })()}
 
           {/* Body */}
-          <div className={cn(
+          <div ref={scrollRef} className={cn(
             'min-h-0 flex-1',
             tab === '투구 재생' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto',
           )}>

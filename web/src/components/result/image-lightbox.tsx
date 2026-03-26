@@ -1,5 +1,7 @@
 import type { FC } from 'react';
+import { useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useDragToDismiss } from '@/hooks/use-drag-to-dismiss';
 import { X } from 'lucide-react';
 
 interface ImageLightboxProps {
@@ -19,21 +21,28 @@ export const ImageLightbox: FC<ImageLightboxProps> = ({
   label,
   sublabel,
 }) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const handleDismiss = useCallback(() => onOpenChange(false), [onOpenChange]);
+  useDragToDismiss(contentRef, handleDismiss);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        ref={contentRef}
         showCloseButton={false}
         className="flex max-h-[85dvh] max-w-[88vw] flex-col items-center gap-0 overflow-hidden border-none bg-black/95 p-0 sm:max-w-md"
       >
         <DialogTitle className="sr-only">{alt}</DialogTitle>
         <DialogDescription className="sr-only">{label ?? alt} 이미지 보기</DialogDescription>
 
-        {/* 닫기 버튼 */}
+        {/* 닫기 버튼 — 시각 32px, 터치 영역 44px */}
         <button
           onClick={() => onOpenChange(false)}
-          className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+          className="absolute top-1 right-1 z-10 flex h-11 w-11 items-center justify-center rounded-full text-white transition-colors active:scale-90"
         >
-          <X className="h-4 w-4" />
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm">
+            <X className="h-4 w-4" />
+          </span>
         </button>
 
         {/* 이미지 */}

@@ -25,25 +25,18 @@ const ERROR_CONFIG: Record<ErrorType, { title: string; tips: string[] }> = {
 
 export const HomePage: FC = () => {
   const navigate = useNavigate();
-  const { state, run, selectImage, selectAndRun, reset } = useFacePipeline();
+  const { state, run, selectImage, selectAndRun, cancel, reset } = useFacePipeline();
 
   useEffect(() => {
     if (state.phase === 'result') {
-      navigate('/lookalike/result');
+      navigate('/lookalike/result', { replace: true, viewTransition: true });
     }
   }, [state.phase, navigate]);
-
-  useEffect(() => {
-    if (state.phase === 'processing') {
-      document.body.classList.add('overscroll-none');
-      return () => document.body.classList.remove('overscroll-none');
-    }
-  }, [state.phase]);
 
   // ── Processing ──
   if (state.phase === 'processing') {
     return (
-      <div className="flex flex-1 items-center justify-center px-5">
+      <div className="flex flex-1 flex-col items-center justify-center px-5">
         <ProcessingScreen
           step={state.step}
           previewUrl={state.previewUrl}
@@ -54,6 +47,12 @@ export const HomePage: FC = () => {
           isBaseballFace={state.isBaseballFace}
           pendingMatches={state.pendingMatches}
         />
+        <button
+          onClick={cancel}
+          className="mt-6 text-[12px] text-muted-foreground/40 transition-colors hover:text-muted-foreground active:scale-95"
+        >
+          취소
+        </button>
       </div>
     );
   }

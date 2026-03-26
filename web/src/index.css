@@ -408,7 +408,34 @@
   }
 }
 
-/* ── View Transitions (theme switch) ── */
+/* ── View Transitions (route & theme) ── */
+
+/* Route transitions: crossfade */
+@keyframes vt-fade-out {
+  to { opacity: 0; }
+}
+@keyframes vt-fade-in {
+  from { opacity: 0; }
+}
+
+::view-transition-old(root) {
+  animation: vt-fade-out 0.15s ease-out both;
+}
+::view-transition-new(root) {
+  animation: vt-fade-in 0.2s ease-out 0.05s both;
+}
+
+/* User photo morph across processing → result */
+.vt-user-photo {
+  view-transition-name: user-photo;
+}
+
+::view-transition-group(user-photo) {
+  animation-duration: 0.4s;
+  animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* Theme switch transitions (keep existing) */
 ::view-transition-group(*),
 ::view-transition-old(*),
 ::view-transition-new(*) {
@@ -427,6 +454,7 @@
     word-break: keep-all;
     line-height: 1.6;
     -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
   }
 }
 
@@ -440,6 +468,6 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-.overscroll-none {
-  overscroll-behavior: none;
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
 }

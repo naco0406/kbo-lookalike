@@ -108,7 +108,7 @@ export const ProcessingScreen: FC<ProcessingScreenProps> = ({
   if (displayedStage === 'loading') {
     return (
       <div className="mx-auto flex w-full max-w-xs flex-col items-center gap-5 animate-in fade-in duration-300">
-        <div className="animate-processing-breathe h-28 w-28 overflow-hidden rounded-full shadow-lg sm:h-36 sm:w-36">
+        <div className="vt-user-photo animate-processing-breathe h-28 w-28 overflow-hidden rounded-full shadow-lg sm:h-36 sm:w-36">
           <img src={previewUrl} alt="준비 중" className="h-full w-full object-cover" />
         </div>
         <p className="text-muted-foreground text-sm">AI 모델을 준비하고 있어요...</p>

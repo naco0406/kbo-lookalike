@@ -316,7 +316,9 @@ export const ImageUpload: FC<ImageUploadProps> = ({ onImageSelect, onCameraConfi
             autoPlay
             playsInline
             muted
+            disablePictureInPicture
             className="h-full w-full -scale-x-100 object-cover"
+            style={{ touchAction: 'none' }}
           />
 
           {/* Vignette + Guide */}
@@ -377,7 +379,7 @@ export const ImageUpload: FC<ImageUploadProps> = ({ onImageSelect, onCameraConfi
             {/* Close */}
             <button
               onClick={closeCamera}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md transition-all active:scale-90"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md transition-all active:scale-90"
               aria-label="닫기"
             >
               <X className="h-4 w-4" />
@@ -428,7 +430,7 @@ export const ImageUpload: FC<ImageUploadProps> = ({ onImageSelect, onCameraConfi
                 closeCamera();
                 requestAnimationFrame(() => fileInputRef.current?.click());
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md transition-all active:scale-90"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md transition-all active:scale-90"
               aria-label="앨범"
             >
               <Image className="h-4 w-4" />
@@ -505,7 +507,7 @@ export const ImageUpload: FC<ImageUploadProps> = ({ onImageSelect, onCameraConfi
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*"
+        accept="image/*"
         onChange={handleFileChange}
         className="hidden"
       />

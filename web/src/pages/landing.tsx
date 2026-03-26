@@ -238,6 +238,7 @@ const FeatureCard: FC<{ feature: FeatureItem; delay: number }> = ({ feature, del
     return (
       <Link
         to={feature.href}
+        viewTransition
         className={cn(
           'animate-reveal-up overflow-hidden rounded-2xl bg-card transition-all duration-200',
           'hover:-translate-y-0.5 hover:bg-card/80 active:scale-[0.97]',
@@ -299,7 +300,7 @@ export const LandingPage: FC = () => {
             </div>
             <Link
               to="/schedule"
-              className="flex items-center gap-0.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+              className="flex items-center gap-0.5 text-[11px] text-muted-foreground transition-all hover:text-foreground active:opacity-60"
             >
               {dateLabel}
               <ChevronRight className="h-3 w-3" />

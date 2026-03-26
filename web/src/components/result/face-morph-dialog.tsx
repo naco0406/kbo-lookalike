@@ -97,12 +97,14 @@ export const FaceMorphDialog: FC<FaceMorphDialogProps> = ({
         <DialogTitle className="sr-only">얼굴 겹치기 비교</DialogTitle>
         <DialogDescription className="sr-only">슬라이더로 두 얼굴을 겹쳐 비교합니다</DialogDescription>
 
-        {/* 닫기 버튼 */}
+        {/* 닫기 버튼 — 시각 32px, 터치 영역 44px */}
         <button
           onClick={() => onOpenChange(false)}
-          className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+          className="absolute top-1 right-1 z-10 flex h-11 w-11 items-center justify-center rounded-full text-white transition-colors active:scale-90"
         >
-          <X className="h-4 w-4" />
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm">
+            <X className="h-4 w-4" />
+          </span>
         </button>
 
         {/* 콘텐츠 영역 */}
@@ -130,7 +132,7 @@ export const FaceMorphDialog: FC<FaceMorphDialogProps> = ({
 
           {/* 슬라이더 + 얼굴 썸네일 */}
           {isReady && (
-            <div className="mt-8 w-full max-w-[300px]">
+            <div className="mt-8 w-full max-w-[300px]" style={{ touchAction: 'manipulation' }}>
               <div className="flex items-center gap-3">
                 {/* 유저 얼굴 */}
                 <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full ring-1 ring-white/15">

@@ -30,7 +30,7 @@ export const ResultPage: FC = () => {
 
   const handleReset = useCallback(() => {
     dispatch({ type: 'RESET' });
-    navigate('/lookalike');
+    navigate('/lookalike', { replace: true, viewTransition: true });
   }, [dispatch, navigate]);
 
   if (state.phase !== 'result') {
@@ -126,6 +126,17 @@ const ResultContent: FC<ResultContentProps> = ({
     ];
     const text = lines.join('\n');
 
+    // 모바일: 네이티브 공유 시트, 데스크톱: 클립보드 복사
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: '643 — 혹시 선수세요?', text });
+        return;
+      } catch (e) {
+        if (e instanceof Error && e.name === 'AbortError') return;
+        // 공유 실패 시 클립보드 fallback
+      }
+    }
+
     try {
       await navigator.clipboard.writeText(text);
       toast.success('결과가 클립보드에 복사되었습니다');
@@ -156,7 +167,7 @@ const ResultContent: FC<ResultContentProps> = ({
   }, [matches, userDisplayUrl, classification]);
 
   return (
-    <div className="container mx-auto max-w-md px-5 pb-12">
+    <div className="container mx-auto max-w-md px-5 pb-12 safe-bottom">
       {/* ── Hero: 선수 중심 ── */}
       <div className="flex flex-col items-center pt-4 pb-6">
         {/* 선수 사진 (메인) — 클릭 시 이미지 뷰어 */}
@@ -169,7 +180,7 @@ const ResultContent: FC<ResultContentProps> = ({
               `${getTeamDisplayName(top.player.teamCode)} · ${top.player.position}`,
             )
           }
-          className="relative mb-4 animate-scale-reveal"
+          className="relative mb-4 animate-scale-reveal transition-transform active:scale-95"
         >
           <div className="h-32 w-32 overflow-hidden rounded-3xl shadow-lg ring-2 ring-border sm:h-36 sm:w-36">
             <PlayerImage
@@ -187,7 +198,7 @@ const ResultContent: FC<ResultContentProps> = ({
             role="button"
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter') openLightbox(previewUrl, '내 사진', '내 사진'); }}
-            className="absolute -bottom-2 -left-2 h-10 w-10 cursor-pointer overflow-hidden rounded-xl ring-2 ring-background shadow-md transition-transform active:scale-95"
+            className="vt-user-photo absolute -bottom-2 -left-2 h-10 w-10 cursor-pointer overflow-hidden rounded-xl ring-2 ring-background shadow-md transition-transform active:scale-95"
           >
             <img src={userDisplayUrl} alt="나" className="h-full w-full object-cover" />
           </div>
