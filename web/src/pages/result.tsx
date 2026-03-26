@@ -13,6 +13,8 @@ import { generateShareCard } from '@/lib/share-card';
 import { RotateCcw, Loader2, Download, Copy } from 'lucide-react';
 import type { MatchResult, Classification } from '@/types/player';
 import { getTeamDisplayName } from '@/constants/analysis-messages';
+import { AdContainer } from '@/components/ad/ad-container';
+import { AD_SLOTS } from '@/components/ad/ad-slots';
 
 interface LightboxState {
   src: string;
@@ -274,6 +276,12 @@ const ResultContent: FC<ResultContentProps> = ({
           ))}
         </div>
       </div>
+
+      {/* ── Ad — 액션 버튼과 Top 5 사이 ── */}
+      <AdContainer
+        type={AD_SLOTS.lookalikeResult.type}
+        unitId={AD_SLOTS.lookalikeResult.unitId}
+      />
 
       {/* ── Top 5 리스트 ── */}
       <div

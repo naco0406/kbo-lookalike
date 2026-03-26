@@ -9,6 +9,8 @@ import { TEAM_COLORS } from '@/constants/analysis-messages';
 import { useMonthSchedule } from '@/hooks/use-month-schedule';
 import type { ScheduleGame } from '@/hooks/use-schedule';
 import { GameDetailModal } from '@/components/schedule/game-detail-modal';
+import { AdContainer } from '@/components/ad/ad-container';
+import { AD_SLOTS } from '@/components/ad/ad-slots';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -554,6 +556,12 @@ export const SchedulePage: FC = () => {
             }
             onGoToToday={goToToday}
           />
+          {/* Ad — 캘린더와 경기 목록 사이 */}
+          <AdContainer
+            type={AD_SLOTS.schedule.type}
+            unitId={AD_SLOTS.schedule.unitId}
+          />
+
           <GamesPanel
             date={selectedDate}
             games={selectedGames}

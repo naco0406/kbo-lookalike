@@ -8,6 +8,8 @@ import { useSchedule } from '@/hooks/use-schedule';
 import type { ScheduleGame } from '@/hooks/use-schedule';
 import { GameDetailModal } from '@/components/schedule/game-detail-modal';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { AdContainer } from '@/components/ad/ad-container';
+import { AD_SLOTS } from '@/components/ad/ad-slots';
 
 // ── Status ───────────────────────────────────────────────────────────────────
 
@@ -334,6 +336,12 @@ export const LandingPage: FC = () => {
             ))}
           </div>
         </section>
+
+        {/* ── Ad — 기능 카드 하단, 페이지 최하단 직전 ── */}
+        <AdContainer
+          type={AD_SLOTS.home.type}
+          unitId={AD_SLOTS.home.unitId}
+        />
       </main>
     </div>
   );

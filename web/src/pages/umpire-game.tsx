@@ -9,6 +9,8 @@ import type { ScheduleGame } from '@/hooks/use-schedule';
 import type { RawTextRelay, ParsedAtBat, ParsedPitch } from '@/components/game/pitch-utils';
 import { parseAtBats } from '@/components/game/pitch-utils';
 import { UmpireView } from '@/components/game/umpire-view';
+import { AdContainer } from '@/components/ad/ad-container';
+import { AD_SLOTS } from '@/components/ad/ad-slots';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -489,6 +491,12 @@ const ResultScreen: FC<{
           </div>
         </div>
       </div>
+
+      {/* Ad — 등급 표시 직후, 상세 통계 위 */}
+      <AdContainer
+        type={AD_SLOTS.umpireResult.type}
+        unitId={AD_SLOTS.umpireResult.unitId}
+      />
 
       {/* Detailed breakdown */}
       <div
