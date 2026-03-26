@@ -1,13 +1,13 @@
 import type { FC, ReactNode } from 'react';
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronRight, Loader2, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TEAM_COLORS } from '@/constants/analysis-messages';
 import { useSchedule } from '@/hooks/use-schedule';
 import type { ScheduleGame } from '@/hooks/use-schedule';
 import { GameDetailModal } from '@/components/schedule/game-detail-modal';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { useProfile } from '@/hooks/use-profile';
 import { AdContainer } from '@/components/ad/ad-container';
 import { AD_SLOTS } from '@/components/ad/ad-slots';
 
@@ -271,6 +271,7 @@ const dateLabel = new Intl.DateTimeFormat('ko-KR', {
 
 export const LandingPage: FC = () => {
   const { games, loading } = useSchedule();
+  const { profile } = useProfile();
   const [detailGame, setDetailGame] = useState<ScheduleGame | null>(null);
 
   return (
@@ -279,9 +280,25 @@ export const LandingPage: FC = () => {
       <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg">
         <div className="mx-auto flex h-12 max-w-md items-center justify-between px-5">
           <span className="font-score text-[32px] leading-none tracking-widest">643</span>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <span className="text-[10px] tracking-wide text-muted-foreground">puttheballinthebox.com</span>
-            <ThemeToggle />
+            <Link
+              to="/profile"
+              viewTransition
+              className="flex h-11 w-11 items-center justify-center rounded-full transition-all active:scale-90"
+            >
+              {profile.avatarUrl ? (
+                <img
+                  src={profile.avatarUrl}
+                  alt="프로필"
+                  className="h-8 w-8 rounded-full object-cover ring-1 ring-border"
+                />
+              ) : (
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
+            </Link>
           </div>
         </div>
       </header>
