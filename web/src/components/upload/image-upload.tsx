@@ -296,7 +296,7 @@ export const ImageUpload: FC<ImageUploadProps> = ({ onImageSelect, onCameraConfi
             className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-foreground text-background text-[14px] font-semibold transition-all active:scale-[0.97]"
           >
             <Search className="h-4 w-4" />
-            닮은꼴 찾기
+            분석하기
           </button>
         </div>
       </div>

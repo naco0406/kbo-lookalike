@@ -898,7 +898,7 @@ export const UmpireGamePage: FC = () => {
                 <ArrowLeft className="h-4 w-4" />
               </button>
               <div className="flex flex-1 items-center justify-center gap-2">
-                <span className="text-[13px] font-bold">스트라이크 콜</span>
+                <span className="text-[13px] font-bold">공을 네모 안에 넣어</span>
                 <span className="text-[11px] tabular-nums text-muted-foreground/50">
                   {currentIdx + 1}/{pitchQueue.length}
                 </span>
@@ -913,7 +913,7 @@ export const UmpireGamePage: FC = () => {
               >
                 <ArrowLeft className="h-4 w-4" />
               </Link>
-              <span className="text-[15px] font-bold">스트라이크 콜</span>
+              <span className="text-[15px] font-bold">공을 네모 안에 넣어</span>
             </>
           )}
         </div>
@@ -1018,7 +1018,7 @@ export const UmpireGamePage: FC = () => {
                         : 'bg-muted text-muted-foreground/40',
                     )}
                   >
-                    시작하기
+                    게임 시작
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </>

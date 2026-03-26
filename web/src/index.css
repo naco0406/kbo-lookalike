@@ -4,6 +4,8 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── 643 Design System — Light & Dark ── */
+
 @theme inline {
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);
@@ -43,75 +45,125 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+
+    /* 643 semantic accent colors */
+    --color-stadium-green: var(--stadium-green);
+    --color-stadium-brown: var(--stadium-brown);
+    --color-stadium-red: var(--stadium-red);
+    --color-stadium-blue: var(--stadium-blue);
+
+    /* 643 font families */
+    --font-score: 'Bebas Neue', ui-monospace, monospace;
 }
 
+/*
+ * ── Light Mode (낮 경기장) ──
+ * Warm cream base, like the leather of a baseball
+ */
 :root {
     --radius: 0.625rem;
-    --background: oklch(0.985 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.965 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.965 0 0);
-    --muted-foreground: oklch(0.5 0 0);
-    --accent: oklch(0.965 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.912 0 0);
-    --input: oklch(0.912 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+
+    --background: #f5f2ec;
+    --foreground: #1c2b3a;
+
+    --card: #ffffff;
+    --card-foreground: #1c2b3a;
+
+    --popover: #ffffff;
+    --popover-foreground: #1c2b3a;
+
+    --primary: #1c2b3a;
+    --primary-foreground: #f5f2ec;
+
+    --secondary: #ebe7df;
+    --secondary-foreground: #1c2b3a;
+
+    --muted: #ebe7df;
+    --muted-foreground: #7a8494;
+
+    --accent: #4aa866;
+    --accent-foreground: #ffffff;
+
+    --destructive: #e25555;
+
+    --border: #ddd8cf;
+    --input: #ddd8cf;
+    --ring: #4aa866;
+
+    --chart-1: #4aa866;
+    --chart-2: #4a9fd4;
+    --chart-3: #d08030;
+    --chart-4: #e25555;
+    --chart-5: #1c2b3a;
+
+    --sidebar: #f5f2ec;
+    --sidebar-foreground: #1c2b3a;
+    --sidebar-primary: #4aa866;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #ebe7df;
+    --sidebar-accent-foreground: #1c2b3a;
+    --sidebar-border: #ddd8cf;
+    --sidebar-ring: #4aa866;
+
+    /* 643 accents — adjusted for light bg */
+    --stadium-green: #4aa866;
+    --stadium-brown: #d08030;
+    --stadium-red: #e25555;
+    --stadium-blue: #4a9fd4;
 }
 
+/*
+ * ── Dark Mode (야간 경기장) ──
+ * Deep navy base, warm cream text
+ */
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --background: #1c2b3a;
+    --foreground: #f0ede6;
+
+    --card: #243447;
+    --card-foreground: #f0ede6;
+
+    --popover: #243447;
+    --popover-foreground: #f0ede6;
+
+    --primary: #f0ede6;
+    --primary-foreground: #1c2b3a;
+
+    --secondary: #2e4560;
+    --secondary-foreground: #f0ede6;
+
+    --muted: #2e4560;
+    --muted-foreground: #8899aa;
+
+    --accent: #5dbb76;
+    --accent-foreground: #1c2b3a;
+
+    --destructive: #f07070;
+
+    --border: #2e4560;
+    --input: #2e4560;
+    --ring: #5dbb76;
+
+    --chart-1: #5dbb76;
+    --chart-2: #6eb3e8;
+    --chart-3: #e09448;
+    --chart-4: #f07070;
+    --chart-5: #f0ede6;
+
+    --sidebar: #1c2b3a;
+    --sidebar-foreground: #f0ede6;
+    --sidebar-primary: #5dbb76;
+    --sidebar-primary-foreground: #1c2b3a;
+    --sidebar-accent: #2e4560;
+    --sidebar-accent-foreground: #f0ede6;
+    --sidebar-border: #2e4560;
+    --sidebar-ring: #5dbb76;
+
+    /* 643 accents — vibrant on dark bg */
+    --stadium-green: #5dbb76;
+    --stadium-brown: #e09448;
+    --stadium-red: #f07070;
+    --stadium-blue: #6eb3e8;
 }
 
 /* ── Custom Animations ── */
@@ -356,15 +408,31 @@
   }
 }
 
+/* ── View Transitions (theme switch) ── */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 0.25s;
+  animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
     font-feature-settings: "ss01", "ss02";
+    word-break: keep-all;
+    line-height: 1.6;
     -webkit-tap-highlight-color: transparent;
   }
+}
+
+/* 643 utility: score font */
+.font-score {
+  font-family: var(--font-score);
 }
 
 /* 모바일 safe area 지원 */

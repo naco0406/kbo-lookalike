@@ -121,7 +121,7 @@ export const HomePage: FC = () => {
               className="h-11 flex-1 text-[14px] active:scale-[0.97]"
             >
               <Search className="mr-1.5 h-4 w-4" />
-              닮은꼴 찾기
+              분석하기
             </Button>
             <Button
               onClick={reset}
@@ -144,12 +144,12 @@ export const HomePage: FC = () => {
         <p
           className="text-muted-foreground mb-3 text-[11px] font-medium uppercase tracking-[0.2em] animate-reveal-up"
         >
-          763명의 KBO 프로야구 선수
+          763명의 선수 중에서
         </p>
         <h1 className="text-[2rem] leading-[1.2] font-extrabold tracking-tight sm:text-[2.5rem]">
-          나와 닮은
+          혹시
           <br />
-          KBO 선수는?
+          선수세요?
         </h1>
         <p
           className="text-muted-foreground mt-3 text-balance text-[15px] leading-relaxed animate-reveal-up"

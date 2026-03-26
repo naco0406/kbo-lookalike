@@ -107,7 +107,7 @@ const ResultContent: FC<ResultContentProps> = ({
   const handleShare = useCallback(async () => {
     const top3 = matches.slice(0, 3);
     const lines = [
-      'KBO 닮은꼴 결과',
+      '643 — 혹시 선수세요?',
       '',
       ...top3.map((m, i) => {
         const p = (Math.round(m.similarity * 1000) / 10).toFixed(1);
@@ -119,8 +119,8 @@ const ResultContent: FC<ResultContentProps> = ({
            `추정 구단: ${classification.team.topTeams[0]?.name ?? ''}`,
            '']
         : []),
-      '나도 닮은꼴 찾아보기',
-      'https://lookalike.naco.kr/',
+      '나도 해보기',
+      'https://puttheballinthebox.com/',
     ];
     const text = lines.join('\n');
 
@@ -142,7 +142,7 @@ const ResultContent: FC<ResultContentProps> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'kbo-lookalike.png';
+      a.download = '643-lookalike.png';
       a.click();
       URL.revokeObjectURL(url);
       toast.success('이미지가 저장되었습니다');
@@ -254,9 +254,9 @@ const ResultContent: FC<ResultContentProps> = ({
       >
         <div className="grid grid-cols-3 gap-2">
           {[
-            { icon: Copy, label: '공유하기', onClick: handleShare, loading: false },
-            { icon: Download, label: '저장하기', onClick: handleSave, loading: isSharing },
-            { icon: RotateCcw, label: '다시 하기', onClick: onReset, loading: false },
+            { icon: Copy, label: '공유', onClick: handleShare, loading: false },
+            { icon: Download, label: '저장', onClick: handleSave, loading: isSharing },
+            { icon: RotateCcw, label: '다시', onClick: onReset, loading: false },
           ].map(({ icon: Icon, label, onClick, loading }) => (
             <button
               key={label}
@@ -281,7 +281,7 @@ const ResultContent: FC<ResultContentProps> = ({
         style={{ animationDelay: '580ms' }}
       >
         <div className="mb-2.5 flex items-center gap-3">
-          <h2 className="shrink-0 text-[13px] font-semibold tracking-tight">닮은꼴 Top 5</h2>
+          <h2 className="shrink-0 text-[13px] font-semibold tracking-tight">Top 5</h2>
           <div className="bg-border h-px flex-1" />
         </div>
         <div className="flex flex-col gap-0.5">

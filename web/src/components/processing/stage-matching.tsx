@@ -14,9 +14,9 @@ const PHASE3_DELAY = PHASE1_DURATION + PHASE2_DURATION; // hero reveal starts
 const PHASE_MESSAGES = {
   appear: [
     '후보 선수들을 불러모으는 중...',
-    '이 선수들 중 닮은꼴이 있을까?',
+    '이 선수들 중 누구와 닮았을까?',
     '최종 후보군을 소집했어요',
-    '닮은 선수가 꽤 있는데요...?',
+    '비슷한 선수가 꽤 있는데요...?',
   ],
   eliminate: [
     '한 명씩 대조하는 중...',

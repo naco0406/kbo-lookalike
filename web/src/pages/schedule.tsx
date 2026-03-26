@@ -528,7 +528,7 @@ export const SchedulePage: FC = () => {
             <span>홈</span>
           </Link>
           <span className="absolute left-1/2 -translate-x-1/2 text-[15px] font-semibold">
-            경기 일정
+            몇 대 몇이야?
           </span>
         </div>
       </header>

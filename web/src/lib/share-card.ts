@@ -103,7 +103,7 @@ export const generateShareCard = async ({
   ctx.font = `600 24px ${F}`;
   ctx.fillStyle = '#B5B0A8';
   ctx.textAlign = 'center';
-  ctx.fillText('⚾  KBO 닮은꼴', CX, 56);
+  ctx.fillText('643 — 혹시 선수세요?', CX, 56);
 
   // ── 선수 사진 (히어로) ──
   const photoW = 520;
@@ -168,7 +168,7 @@ export const generateShareCard = async ({
   // ── 하단 URL ──
   ctx.font = `400 21px ${F}`;
   ctx.fillStyle = '#D0CDC8';
-  ctx.fillText('lookalike.naco.kr', CX, SIZE - 44);
+  ctx.fillText('puttheballinthebox.com', CX, SIZE - 44);
 
   // ── PNG ──
   return new Promise<Blob>((resolve, reject) => {

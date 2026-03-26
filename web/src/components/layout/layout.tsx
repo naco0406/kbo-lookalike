@@ -4,10 +4,13 @@ import { Outlet, Link, useLocation } from 'react-router';
 import { ChevronLeft } from 'lucide-react';
 import { AppStateProvider } from '@/context/app-state-context';
 import { Toaster } from '@/components/ui/sonner';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { useTheme } from '@/hooks/use-theme';
 import { startPreload } from '@/ml/preload';
 
 export const Layout: FC = () => {
   const { pathname } = useLocation();
+  useTheme();
 
   // /lookalike 진입 시 ONNX 모델 + 임베딩 프리로드 시작
   useEffect(() => {
@@ -17,13 +20,13 @@ export const Layout: FC = () => {
 
   return (
     <AppStateProvider>
-      <div className="bg-background flex min-h-dvh flex-col">
+      <div className="flex min-h-dvh flex-col bg-background text-foreground">
         <header className="absolute inset-x-0 top-0 z-50">
           <div className="container mx-auto flex h-12 max-w-md items-center px-5">
             {/* Back to platform home */}
             <Link
               to="/"
-              className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-[13px] transition-colors"
+              className="flex items-center gap-1 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
             >
               <ChevronLeft className="h-4 w-4" />
               <span>홈</span>
@@ -34,8 +37,13 @@ export const Layout: FC = () => {
               to="/lookalike"
               className="absolute left-1/2 -translate-x-1/2 text-sm font-bold tracking-tight opacity-60 transition-opacity hover:opacity-100"
             >
-              닮은꼴 찾기
+              혹시 선수세요?
             </Link>
+
+            {/* Theme toggle — right */}
+            <div className="ml-auto">
+              <ThemeToggle />
+            </div>
           </div>
         </header>
 
