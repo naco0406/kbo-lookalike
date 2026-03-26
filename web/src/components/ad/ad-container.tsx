@@ -123,7 +123,7 @@ export const AdContainer: FC<AdContainerProps> = ({ type, unitId, className }) =
       {/* 광고 래퍼 */}
       <div
         ref={containerRef}
-        className="overflow-hidden rounded-[20px] border border-border bg-card"
+        className=""
         style={{ width, minHeight: adLoaded ? height : 0 }}
       />
     </div>
