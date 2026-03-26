@@ -11,16 +11,6 @@ import { useProfile } from '@/hooks/use-profile';
 import { AdContainer } from '@/components/ad/ad-container';
 import { AD_SLOTS } from '@/components/ad/ad-slots';
 
-// ── Status ───────────────────────────────────────────────────────────────────
-
-const STATUS_LABEL: Record<ScheduleGame['status'], string> = {
-  upcoming: '예정',
-  live: '진행중',
-  completed: '종료',
-  cancelled: '취소',
-  suspended: '중단',
-};
-
 // ── Game components ──────────────────────────────────────────────────────────
 
 const TeamLogo: FC<{ code: string; size?: 'sm' | 'md' }> = ({ code, size = 'md' }) => {
@@ -95,19 +85,24 @@ const GameCard: FC<{ game: ScheduleGame; delay: number; onClick?: () => void }> 
             </span>
           )}
 
-          <div className="mt-1.5 flex items-center gap-1.5">
-            {isLive && (
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-50" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-destructive" />
+          <div className="mt-1.5 flex items-center gap-1">
+            {isLive ? (
+              <>
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-50" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-destructive" />
+                </span>
+                <span className="text-[10px] font-semibold text-destructive">
+                  {game.inning ?? '진행중'}
+                </span>
+                <span className="text-[10px] text-muted-foreground/40">·</span>
+                <span className="text-[10px] text-muted-foreground">{game.venue}</span>
+              </>
+            ) : (
+              <span className="text-[10px] text-muted-foreground">
+                {game.venue}
               </span>
             )}
-            <span className={cn(
-              'text-[10px]',
-              isLive ? 'font-semibold text-destructive' : 'text-muted-foreground',
-            )}>
-              {isLive && game.inning ? `${game.inning} · ` : ''}{game.venue} · {STATUS_LABEL[game.status]}
-            </span>
           </div>
         </div>
 
@@ -277,29 +272,26 @@ export const LandingPage: FC = () => {
   return (
     <div className="flex min-h-dvh flex-col">
       {/* ── Header ── */}
-      <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-lg">
-        <div className="mx-auto flex h-12 max-w-md items-center justify-between px-5">
-          <span className="font-score text-[32px] leading-none tracking-widest">643</span>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] tracking-wide text-muted-foreground">puttheballinthebox.com</span>
-            <Link
-              to="/profile"
-              viewTransition
-              className="flex h-11 w-11 items-center justify-center rounded-full transition-all active:scale-90"
-            >
-              {profile.avatarUrl ? (
-                <img
-                  src={profile.avatarUrl}
-                  alt="프로필"
-                  className="h-8 w-8 rounded-full object-cover ring-1 ring-border"
-                />
-              ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                </div>
-              )}
-            </Link>
-          </div>
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-14 max-w-md items-center justify-between px-5">
+          <span className="font-score text-[28px] leading-none tracking-widest opacity-80">643</span>
+          <Link
+            to="/profile"
+            viewTransition
+            className="flex h-11 w-11 items-center justify-center rounded-full transition-all active:scale-90"
+          >
+            {profile.avatarUrl ? (
+              <img
+                src={profile.avatarUrl}
+                alt="프로필"
+                className="h-8 w-8 rounded-full object-cover ring-2 ring-border"
+              />
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                <User className="h-4 w-4 text-muted-foreground/60" />
+              </div>
+            )}
+          </Link>
         </div>
       </header>
 
@@ -309,15 +301,15 @@ export const LandingPage: FC = () => {
       <main className="mx-auto w-full max-w-md flex-1 px-5 pb-16">
 
         {/* ── Today's Games ── */}
-        <section className="mt-5 mb-10">
-          <div className="mb-3 flex items-baseline justify-between">
+        <section className="mt-4 mb-10">
+          <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h2 className="text-[14px] font-bold">오늘의 경기</h2>
+              <h2 className="text-[15px] font-bold tracking-tight">오늘의 경기</h2>
               {loading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
             </div>
             <Link
               to="/schedule"
-              className="flex items-center gap-0.5 text-[11px] text-muted-foreground transition-all hover:text-foreground active:opacity-60"
+              className="flex items-center gap-0.5 rounded-full bg-muted/60 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-all hover:bg-muted active:scale-95"
             >
               {dateLabel}
               <ChevronRight className="h-3 w-3" />
@@ -348,6 +340,7 @@ export const LandingPage: FC = () => {
 
         {/* ── Features ── */}
         <section>
+          <h2 className="mb-3 text-[15px] font-bold tracking-tight">더 즐기기</h2>
           <div className="grid grid-cols-2 gap-2.5">
             {FEATURES.map((f, i) => (
               <FeatureCard key={f.id} feature={f} delay={200 + i * 50} />

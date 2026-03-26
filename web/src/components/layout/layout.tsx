@@ -4,7 +4,6 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router';
 import { ChevronLeft } from 'lucide-react';
 import { AppStateProvider, useAppState, useAppDispatch } from '@/context/app-state-context';
 import { Toaster } from '@/components/ui/sonner';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { useTheme } from '@/hooks/use-theme';
 import { startPreload } from '@/ml/preload';
 import { useScrollToTop } from '@/hooks/use-scroll-to-top';
@@ -53,11 +52,6 @@ const LayoutHeader: FC = () => {
         >
           혹시 선수세요?
         </Link>
-
-        {/* Theme toggle — right */}
-        <div className="ml-auto">
-          <ThemeToggle />
-        </div>
       </div>
     </header>
   );
