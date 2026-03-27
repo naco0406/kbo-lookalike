@@ -107,17 +107,13 @@ const GameCard: FC<{ game: ScheduleGame; delay: number; isMyTeam?: boolean; onCl
     <Tag
       {...(isClickable ? { onClick, type: 'button' as const } : {})}
       className={cn(
-        'animate-reveal-up relative w-full overflow-hidden rounded-2xl border bg-card text-left',
+        'animate-reveal-up w-full overflow-hidden rounded-2xl border bg-card text-left',
         isLive && 'border-destructive/20',
-        isMyTeam && !isLive && 'border-accent/25',
+        isMyTeam && !isLive && 'border-accent/40',
         isClickable && 'cursor-pointer transition-colors hover:border-border hover:bg-card/80 active:scale-[0.99]',
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
-      {/* My team accent line */}
-      {isMyTeam && (
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-[3px] rounded-l-2xl bg-accent/50" />
-      )}
       {/* Live banner */}
       {isLive && (
         <div className="flex items-center gap-1.5 bg-destructive/5 px-4 py-1.5">

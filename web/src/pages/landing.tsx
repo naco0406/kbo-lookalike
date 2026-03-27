@@ -43,15 +43,11 @@ const GameCard: FC<{ game: ScheduleGame; delay: number; isMyTeam?: boolean; onCl
         'animate-reveal-up group relative w-full overflow-hidden rounded-2xl px-5 py-3.5 text-left',
         'bg-card transition-all duration-200',
         isLive && 'ring-1 ring-destructive/25',
-        isMyTeam && !isLive && 'ring-1 ring-accent/20',
+        isMyTeam && !isLive && 'ring-1 ring-accent/40',
         isClickable && 'cursor-pointer active:scale-[0.98]',
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
-      {/* My team accent line */}
-      {isMyTeam && !isLive && (
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-accent/50" />
-      )}
       {/* Live accent line */}
       {isLive && (
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-destructive/60 to-transparent" />
