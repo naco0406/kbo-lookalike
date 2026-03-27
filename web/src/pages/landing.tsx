@@ -230,6 +230,15 @@ const MORE_FEATURES: MoreItem[] = [
     available: true,
   },
   {
+    id: 'mbti',
+    icon: '🧬',
+    title: '야구 MBTI',
+    sub: '나는 어떤 야구 유형?',
+    href: null,
+    available: false,
+    badge: '준비 중',
+  },
+  {
     id: 'fortune',
     icon: '🔮',
     title: '감독님 선발은요?',
