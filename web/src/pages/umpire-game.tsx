@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link } from 'react-router';
-import { ArrowLeft, Loader2, ChevronRight, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Loader2, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TEAM_COLORS } from '@/constants/analysis-messages';
 import { useMonthSchedule } from '@/hooks/use-month-schedule';
@@ -9,12 +9,13 @@ import type { ScheduleGame } from '@/hooks/use-schedule';
 import type { RawTextRelay, ParsedAtBat, ParsedPitch } from '@/components/game/pitch-utils';
 import { parseAtBats } from '@/components/game/pitch-utils';
 import { UmpireView } from '@/components/game/umpire-view';
+import { SlotRoulette } from '@/components/game/slot-roulette';
 import { AdContainer } from '@/components/ad/ad-container';
 import { AD_SLOTS } from '@/components/ad/ad-slots';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type Phase = 'select' | 'loading' | 'playing' | 'result';
+type Phase = 'select' | 'roulette' | 'loading' | 'playing' | 'result';
 type PlayState = 'intro' | 'flying' | 'judging' | 'revealing';
 
 interface QueueItem {
@@ -99,23 +100,18 @@ const formatInningLabel = (key: string): string => {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/** KST 기준 "YYYY-MM-DD" 문자열을 반환한다. */
-const toKSTDateString = (date: Date): string => {
-  return date.toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
-};
+/** KST 기준 "YYYY-MM" 문자열을 반환한다. */
+const toKSTMonthString = (date: Date): string =>
+  date.toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(0, 7);
 
-const generateDates = (): string[] => {
-  const dates: string[] = [];
+/** 현재 월 + 이전 월 (두 달 커버) */
+const getMonths = (): [string, string] => {
   const now = new Date();
-  for (let i = 0; i <= 6; i++) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    dates.push(toKSTDateString(d));
-  }
-  return dates;
+  const cur = toKSTMonthString(now);
+  const prev = new Date(now);
+  prev.setMonth(prev.getMonth() - 1);
+  return [cur, toKSTMonthString(prev)];
 };
-
-const DATES = generateDates();
 
 const formatDateLabel = (dateStr: string): { day: string; weekday: string } => {
   const d = new Date(dateStr + 'T12:00:00');
@@ -126,31 +122,6 @@ const formatDateLabel = (dateStr: string): { day: string; weekday: string } => {
 };
 
 // ── Sub-components: Selection Phase ──────────────────────────────────────────
-
-const DatePill: FC<{
-  date: string;
-  active: boolean;
-  onClick: () => void;
-}> = ({ date, active, onClick }) => {
-  const { day, weekday } = formatDateLabel(date);
-  const isToday = date === DATES[0];
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-3 py-2 transition-all active:scale-95',
-        active
-          ? 'bg-primary text-primary-foreground shadow-sm'
-          : 'bg-muted/40 text-muted-foreground hover:bg-muted',
-      )}
-    >
-      <span className="text-[11px] font-medium">{isToday ? '오늘' : day}</span>
-      <span className={cn('text-[9px]', active ? 'text-primary-foreground/70' : 'text-muted-foreground/50')}>
-        {weekday}
-      </span>
-    </button>
-  );
-};
 
 const MiniGameCard: FC<{
   game: ScheduleGame;
@@ -573,21 +544,22 @@ export const UmpireGamePage: FC = () => {
   const [phase, setPhase] = useState<Phase>('select');
 
   // ── Selection state ──
-  const [selectedDate, setSelectedDate] = useState(DATES[1] ?? DATES[0]);
-  const month = selectedDate.slice(0, 7);
-  const { gamesByDate, loading: scheduleLoading } = useMonthSchedule(month);
-  const completedGames = useMemo(
-    () => (gamesByDate[selectedDate] ?? []).filter(g => g.status === 'completed'),
-    [gamesByDate, selectedDate],
-  );
+  // 현재 월 + 이전 월 로드 → 완료된 경기 전체를 확보
+  const [curMonth, prevMonth] = useMemo(getMonths, []);
+  const { gamesByDate: curGames, loading: curLoading } = useMonthSchedule(curMonth);
+  const { gamesByDate: prevGames, loading: prevLoading } = useMonthSchedule(prevMonth);
+  const scheduleLoading = curLoading || prevLoading;
+
+  // 두 달의 gamesByDate 병합
+  const gamesByDate = useMemo(() => {
+    const merged: Record<string, ScheduleGame[]> = {};
+    for (const [d, g] of Object.entries(prevGames)) merged[d] = g;
+    for (const [d, g] of Object.entries(curGames)) merged[d] = g;
+    return merged;
+  }, [curGames, prevGames]);
 
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [selectedInningKey, setSelectedInningKey] = useState<string>('1T');
-
-  const selectedGame = useMemo(
-    () => completedGames.find(g => g.id === selectedGameId) ?? null,
-    [completedGames, selectedGameId],
-  );
 
   // ── Relay data ──
   const [allAtBats, setAllAtBats] = useState<ParsedAtBat[]>([]);
@@ -620,6 +592,105 @@ export const UmpireGamePage: FC = () => {
     }),
     [inningPitchCounts],
   );
+
+  // ── Roulette metadata (random start용) ──
+  const [rouletteInfo, setRouletteInfo] = useState<{
+    dateLabel: string;
+    matchLabel: string;
+    awayCode: string;
+    homeCode: string;
+    inningLabel: string;
+  } | null>(null);
+
+  // ── All completed games (for random start + game list) ──
+  const allCompletedGames = useMemo(() => {
+    const games: Array<{ date: string; game: ScheduleGame }> = [];
+    // 날짜 내림차순 (최신 먼저)
+    const sortedDates = Object.keys(gamesByDate).sort((a, b) => b.localeCompare(a));
+    for (const dateStr of sortedDates) {
+      for (const g of gamesByDate[dateStr]) {
+        if (g.status === 'completed') games.push({ date: dateStr, game: g });
+      }
+    }
+    return games;
+  }, [gamesByDate]);
+
+  const selectedGame = useMemo(
+    () => allCompletedGames.find(({ game: g }) => g.id === selectedGameId)?.game ?? null,
+    [allCompletedGames, selectedGameId],
+  );
+
+  /** 랜덤 경기 선택 → 릴레이 로드 → 랜덤 이닝 선택 → 룰렛 시작 */
+  const startRandom = useCallback(async () => {
+    if (allCompletedGames.length === 0) return;
+
+    // 1. 랜덤 경기 선택
+    const pick = allCompletedGames[Math.floor(Math.random() * allCompletedGames.length)];
+    const { date, game } = pick;
+
+    // 2. 릴레이 로드
+    setPhase('loading');
+    try {
+      const resp = await fetch(`/api/relay/${game.id}`);
+      if (!resp.ok) throw new Error(`${resp.status}`);
+      const json = await resp.json();
+      const textRelays = json.textRelayData?.textRelays ?? [];
+      const sorted = textRelays.slice().sort(
+        (a: { no?: number }, b: { no?: number }) => (a.no ?? 0) - (b.no ?? 0),
+      );
+      const abs = parseAtBats(sorted as unknown as RawTextRelay[]);
+
+      // 사용 가능한 이닝 계산
+      const inningMap = new Map<string, number>();
+      for (const ab of abs) {
+        const key = toInningKey(ab.inning, ab.isHome);
+        const count = ab.pitches.filter(p => p.trajectory).length;
+        inningMap.set(key, (inningMap.get(key) ?? 0) + count);
+      }
+      const innings = Array.from(inningMap.keys()).filter(k => (inningMap.get(k) ?? 0) > 0);
+      if (innings.length === 0) {
+        // 투구 데이터 없으면 다시 select로
+        setPhase('select');
+        return;
+      }
+
+      // 3. 랜덤 이닝 선택
+      const randomInning = innings[Math.floor(Math.random() * innings.length)];
+
+      // 4. 상태 세팅
+      setSelectedGameId(game.id);
+      setAllAtBats(abs);
+      setSelectedInningKey(randomInning);
+
+      // pitcher names
+      const td = json.textRelayData ?? json;
+      const getPitcherName = (lineup: Record<string, unknown> | undefined): string => {
+        const pitchers = ((lineup ?? {}).pitcher ?? []) as Array<{ name?: string }>;
+        return pitchers[0]?.name ?? '';
+      };
+      setPitcherNames({
+        home: getPitcherName(td.homeLineup),
+        away: getPitcherName(td.awayLineup),
+      });
+
+      // 5. 룰렛 메타데이터
+      const { day, weekday } = formatDateLabel(date);
+      const away = TEAM_COLORS[game.awayCode];
+      const home = TEAM_COLORS[game.homeCode];
+      setRouletteInfo({
+        dateLabel: `${day} ${weekday}`,
+        matchLabel: `${away?.shortName ?? game.awayCode} vs ${home?.shortName ?? game.homeCode}`,
+        awayCode: game.awayCode,
+        homeCode: game.homeCode,
+        inningLabel: formatInningLabel(randomInning),
+      });
+
+      // 6. 룰렛 페이즈로
+      setPhase('roulette');
+    } catch {
+      setPhase('select');
+    }
+  }, [allCompletedGames]);
 
   // ── Playing state ──
   const [pitchQueue, setPitchQueue] = useState<QueueItem[]>([]);
@@ -685,11 +756,6 @@ export const UmpireGamePage: FC = () => {
     fetchRelay();
     return () => { cancelled = true; };
   }, [selectedGameId]);
-
-  useEffect(() => {
-    setSelectedGameId(null);
-    setAllAtBats([]);
-  }, [selectedDate]);
 
   // ── Animation: intro → flying (judgable) ──
   useEffect(() => {
@@ -792,7 +858,8 @@ export const UmpireGamePage: FC = () => {
     revealRef.current = setTimeout(() => advanceToNext(), REVEAL_MS);
   }, [playState, currentItem, advanceToNext]);
 
-  // ── Start game ──
+  // ── Start game (+ ref for stable callback from roulette) ──
+  const startGameRef = useRef<() => void>(() => {});
   const startGame = useCallback(() => {
     const { inning, half } = parseInningKey(selectedInningKey);
     const isHome = half === 'B';
@@ -841,6 +908,7 @@ export const UmpireGamePage: FC = () => {
     setPlayState('intro');
     setPhase('playing');
   }, [allAtBats, selectedInningKey]);
+  startGameRef.current = startGame;
 
   // ── Exit prevention during playing ──
   useEffect(() => {
@@ -930,109 +998,137 @@ export const UmpireGamePage: FC = () => {
       {/* ── Select Phase ── */}
       {phase === 'select' && (
         <div className="mx-auto w-full max-w-md flex-1 px-5 pb-12">
-          <div className="mt-6 mb-6 text-center">
-            <p className="text-[13px] text-muted-foreground/60 leading-relaxed">
-              실제 투구 궤적으로 볼과 스트라이크를 판정하세요
-            </p>
-          </div>
 
-          <div className="mb-5 flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            {DATES.map(d => (
-              <DatePill
-                key={d}
-                date={d}
-                active={selectedDate === d}
-                onClick={() => setSelectedDate(d)}
-              />
-            ))}
-          </div>
-
-          {scheduleLoading ? (
-            <div className="flex h-32 items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/40" />
-            </div>
-          ) : completedGames.length === 0 ? (
-            <div className="flex h-32 flex-col items-center justify-center gap-1.5 rounded-2xl border bg-card">
-              <p className="text-[13px] text-muted-foreground/50">종료된 경기가 없습니다</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {completedGames.map(g => (
-                <MiniGameCard
-                  key={g.id}
-                  game={g}
-                  selected={selectedGameId === g.id}
-                  onClick={() => setSelectedGameId(prev => prev === g.id ? null : g.id)}
-                />
-              ))}
-            </div>
-          )}
-
-          {selectedGameId && (
-            <div className="mt-6">
-              {relayLoading ? (
-                <div className="flex h-20 items-center justify-center gap-2 text-muted-foreground/40">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-[12px]">투구 데이터 불러오는 중...</span>
+          {/* ── Hero: 바로 시작 ── */}
+          <section className="mt-5 mb-10">
+            <button
+              onClick={startRandom}
+              disabled={scheduleLoading || allCompletedGames.length === 0}
+              className="group w-full animate-reveal-up overflow-hidden rounded-3xl bg-accent text-left transition-all active:scale-[0.98] disabled:opacity-50"
+            >
+              <div className="px-6 pt-6 pb-5">
+                <span className="text-[36px] leading-none">🎰</span>
+                <p className="mt-3 text-[22px] font-extrabold leading-tight tracking-tight text-accent-foreground">
+                  바로 시작
+                </p>
+                <p className="mt-2 text-[14px] leading-relaxed text-accent-foreground/70">
+                  랜덤 경기로 바로 판정해보세요
+                </p>
+                <div className="mt-5 inline-flex items-center rounded-full bg-accent-foreground/20 px-5 py-2.5 text-[14px] font-bold text-accent-foreground transition-colors group-hover:bg-accent-foreground/30">
+                  랜덤 판정하기
                 </div>
-              ) : availableInnings.length === 0 ? (
-                <div className="rounded-2xl border bg-card px-4 py-6 text-center">
-                  <p className="text-[13px] text-muted-foreground/50">
-                    판정 가능한 투구 데이터가 없습니다
-                  </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/30">
-                    PTS 궤적 데이터가 포함된 경기를 선택하세요
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <h3 className="mb-2.5 text-[13px] font-semibold">이닝 선택</h3>
-                  <div className="grid grid-cols-4 gap-2">
-                    {availableInnings.map(key => {
-                      const count = inningPitchCounts.get(key) ?? 0;
-                      const active = selectedInningKey === key;
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => setSelectedInningKey(key)}
-                          className={cn(
-                            'flex flex-col items-center rounded-xl py-2.5 transition-all active:scale-95',
-                            active
-                              ? 'bg-primary text-primary-foreground shadow-sm'
-                              : 'bg-muted/40 text-muted-foreground hover:bg-muted',
-                          )}
-                        >
-                          <span className="text-[12px] font-bold">{formatInningLabel(key)}</span>
-                          <span
-                            className={cn(
-                              'text-[9px] tabular-nums',
-                              active ? 'text-primary-foreground/70' : 'text-muted-foreground/40',
+              </div>
+            </button>
+          </section>
+
+          {/* ── 최근 경기 ── */}
+          <section>
+            <h2 className="mb-4 text-[17px] font-extrabold tracking-tight">최근 경기</h2>
+
+            {scheduleLoading ? (
+              <div className="flex h-32 items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/40" />
+              </div>
+            ) : allCompletedGames.length === 0 ? (
+              <div className="flex h-32 flex-col items-center justify-center gap-1.5 rounded-2xl border bg-card">
+                <p className="text-[13px] text-muted-foreground/50">종료된 경기가 없습니다</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {/* 최근 15경기만 표시 (날짜 라벨 포함, 컴팩트) */}
+                {(() => {
+                  const recent = allCompletedGames.slice(0, 15);
+                  let lastDate = '';
+                  const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
+                  return recent.map(({ date, game: g }) => {
+                    const showDate = date !== lastDate;
+                    lastDate = date;
+                    const { day, weekday } = formatDateLabel(date);
+                    const isSelected = selectedGameId === g.id;
+                    return (
+                      <div key={g.id}>
+                        {showDate && (
+                          <p className="mb-1.5 mt-3 first:mt-0 text-[12px] font-semibold text-muted-foreground/50">
+                            {date === todayStr ? '오늘' : `${day} (${weekday})`}
+                          </p>
+                        )}
+                        <MiniGameCard
+                          game={g}
+                          selected={isSelected}
+                          onClick={() => setSelectedGameId(isSelected ? null : g.id)}
+                        />
+                        {/* 인라인 이닝 선택 */}
+                        {isSelected && (
+                          <div className="mt-2 animate-reveal-up rounded-2xl border border-border/30 bg-card/60 px-4 py-3">
+                            {relayLoading ? (
+                              <div className="flex h-12 items-center justify-center gap-2 text-muted-foreground/40">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span className="text-[12px]">투구 데이터 로딩...</span>
+                              </div>
+                            ) : availableInnings.length === 0 ? (
+                              <p className="py-2 text-center text-[12px] text-muted-foreground/50">
+                                판정 가능한 투구 데이터가 없습니다
+                              </p>
+                            ) : (
+                              <>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {availableInnings.map((key) => {
+                                    const count = inningPitchCounts.get(key) ?? 0;
+                                    const active = selectedInningKey === key;
+                                    return (
+                                      <button
+                                        key={key}
+                                        onClick={() => setSelectedInningKey(key)}
+                                        className={cn(
+                                          'rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-all active:scale-95',
+                                          active
+                                            ? 'bg-accent text-accent-foreground'
+                                            : 'bg-muted/50 text-muted-foreground hover:bg-muted',
+                                        )}
+                                      >
+                                        {formatInningLabel(key)}
+                                        <span className={cn(
+                                          'ml-1 text-[9px] font-medium',
+                                          active ? 'text-accent-foreground/70' : 'text-muted-foreground/40',
+                                        )}>
+                                          {count}
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                <button
+                                  onClick={startGame}
+                                  disabled={pitchCount === 0}
+                                  className="mt-3 flex h-10 w-full items-center justify-center rounded-xl bg-accent text-[13px] font-bold text-accent-foreground transition-all hover:bg-accent/90 active:scale-[0.97] disabled:opacity-30"
+                                >
+                                  {formatInningLabel(selectedInningKey)} 시작
+                                </button>
+                              </>
                             )}
-                          >
-                            {count}투구
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
 
-                  <button
-                    onClick={startGame}
-                    disabled={pitchCount === 0}
-                    className={cn(
-                      'mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[14px] font-bold shadow-sm transition-all active:scale-[0.97]',
-                      pitchCount > 0
-                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                        : 'bg-muted text-muted-foreground/40',
-                    )}
-                  >
-                    게임 시작
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </>
-              )}
-            </div>
-          )}
+      {/* ── Roulette Phase ── */}
+      {phase === 'roulette' && rouletteInfo && (
+        <div className="flex flex-1 items-center justify-center">
+          <SlotRoulette
+            dateLabel={rouletteInfo.dateLabel}
+            matchLabel={rouletteInfo.matchLabel}
+            awayCode={rouletteInfo.awayCode}
+            homeCode={rouletteInfo.homeCode}
+            inningLabel={rouletteInfo.inningLabel}
+            onComplete={() => startGameRef.current()}
+          />
         </div>
       )}
 
