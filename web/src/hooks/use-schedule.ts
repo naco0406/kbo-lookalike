@@ -33,6 +33,7 @@ interface UseScheduleReturn {
   games: ScheduleGame[];
   loading: boolean;
   error: string | null;
+  refresh: () => Promise<void>;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -82,5 +83,5 @@ export const useSchedule = (): UseScheduleReturn => {
     load();
   }, [load]);
 
-  return { games, loading, error };
+  return { games, loading, error, refresh: load };
 };

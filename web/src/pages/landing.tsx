@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { ChevronRight, Loader2, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -8,6 +8,8 @@ import { useSchedule } from '@/hooks/use-schedule';
 import type { ScheduleGame } from '@/hooks/use-schedule';
 import { GameDetailModal } from '@/components/schedule/game-detail-modal';
 import { useProfile } from '@/hooks/use-profile';
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
+import { PullToRefreshIndicator } from '@/components/pull-to-refresh';
 import { AdContainer } from '@/components/ad/ad-container';
 import { AD_SLOTS } from '@/components/ad/ad-slots';
 
@@ -305,11 +307,19 @@ const isMyTeamGame = (game: ScheduleGame, teamCode: string | null): boolean =>
   !!teamCode && (game.awayCode === teamCode || game.homeCode === teamCode);
 
 export const LandingPage: FC = () => {
-  const { games, loading } = useSchedule();
+  const { games, loading, refresh } = useSchedule();
   const { profile } = useProfile();
   const [detailGame, setDetailGame] = useState<ScheduleGame | null>(null);
   const teamCode = profile.favoriteTeam;
   const teamInfo = teamCode ? TEAM_COLORS[teamCode] : null;
+
+  // Pull-to-refresh
+  const handleRefresh = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
+  const { phase, pullDistance, progress } = usePullToRefresh({
+    onRefresh: handleRefresh,
+  });
 
   const sortedGames = useMemo(
     () => sortGamesByTeam(games, teamCode),
@@ -363,6 +373,14 @@ export const LandingPage: FC = () => {
 
       {/* ── Content ── */}
       <main className="mx-auto w-full max-w-md flex-1 px-5 pb-16">
+
+        {/* ── Pull-to-refresh ── */}
+        <PullToRefreshIndicator
+          phase={phase}
+          pullDistance={pullDistance}
+          progress={progress}
+          teamCode={teamCode}
+        />
 
         {/* ── Context line ── */}
         <div className="mt-4 mb-6 animate-reveal-up">
