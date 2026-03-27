@@ -31,9 +31,9 @@ const TRAIL_COLOR = '#d8d4ca';
 const PLATE_HALF_W = 0.7083;
 const PLATE_Y = 0.7;
 const EYE_BACK = 5.0;
-const EYE_HEIGHT = 2.8;
+const EYE_HEIGHT = 3.4;
 const D_PLATE = PLATE_Y + EYE_BACK;
-const BALL_R = 7;
+const BALL_R = 5;
 const TRAIL_COUNT = 10;
 const TRAIL_STEP = 0.02;
 
@@ -466,9 +466,9 @@ export const UmpireView: FC<UmpireViewProps> = ({
           const c = PITCH_RESULT_COLOR[p.result];
           return (
             <g key={i} opacity={0.35}>
-              <circle cx={sx} cy={sy} r={4.5} fill={c} stroke="rgba(0,0,0,0.2)" strokeWidth={0.4} />
+              <circle cx={sx} cy={sy} r={3.5} fill={c} stroke="rgba(0,0,0,0.2)" strokeWidth={0.4} />
               <text x={sx} y={sy + 0.3} textAnchor="middle" dominantBaseline="middle"
-                fill="white" fontSize={4.5} fontWeight={700}>{p.number}</text>
+                fill="white" fontSize={3.5} fontWeight={700}>{p.number}</text>
             </g>
           );
         })}
@@ -523,11 +523,11 @@ export const UmpireView: FC<UmpireViewProps> = ({
                   dur={`${0.4 + i * 0.1}s`} fill="freeze" />
               </circle>
             ))}
-            <circle cx={landedPos.sx} cy={landedPos.sy} r={10} fill={impactColor} opacity={0}>
+            <circle cx={landedPos.sx} cy={landedPos.sy} r={7} fill={impactColor} opacity={0}>
               <animate attributeName="opacity" from="0.3" to="0.06" dur="0.6s" fill="freeze" />
-              <animate attributeName="r" from="8" to="22" dur="0.6s" fill="freeze" />
+              <animate attributeName="r" from="6" to="18" dur="0.6s" fill="freeze" />
             </circle>
-            <Baseball cx={landedPos.sx} cy={landedPos.sy} r={10} uid={uid}
+            <Baseball cx={landedPos.sx} cy={landedPos.sy} r={7} uid={uid}
               number={pitch?.number} />
           </g>
         )}
