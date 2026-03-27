@@ -19,8 +19,6 @@ const serveOnnxWorkers = (): Plugin => ({
         if (fs.existsSync(filePath)) {
           res.setHeader('Content-Type', 'application/javascript')
           res.setHeader('Access-Control-Allow-Origin', '*')
-          res.setHeader('Cross-Origin-Opener-Policy', 'same-origin')
-          res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless')
           fs.createReadStream(filePath).pipe(res)
           return
         }
@@ -246,12 +244,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  server: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'credentialless',
-    },
-  },
+  server: {},
   optimizeDeps: {
     exclude: ['onnxruntime-web'],
   },

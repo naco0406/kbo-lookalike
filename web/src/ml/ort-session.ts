@@ -2,7 +2,11 @@ import * as ort from 'onnxruntime-web';
 import { assetUrl } from './asset-url';
 
 ort.env.wasm.wasmPaths = '/';
-ort.env.wasm.numThreads = Math.min(navigator.hardwareConcurrency ?? 4, 4);
+// SharedArrayBuffer가 있으면 멀티스레드, 없으면 싱글스레드 (COEP 미적용 환경)
+ort.env.wasm.numThreads =
+  typeof SharedArrayBuffer !== 'undefined'
+    ? Math.min(navigator.hardwareConcurrency ?? 4, 4)
+    : 1;
 
 const sessionCache = new Map<string, ort.InferenceSession>();
 const pendingLoads = new Map<string, Promise<ort.InferenceSession>>();
