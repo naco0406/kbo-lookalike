@@ -1,7 +1,9 @@
 import type { FC } from 'react';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link } from 'react-router';
-import { ArrowLeft, Loader2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Loader2, RotateCcw, Copy, Download } from 'lucide-react';
+import { toast } from 'sonner';
+import { generateUmpireShareCard } from '@/lib/umpire-share-card';
 import { cn } from '@/lib/utils';
 import { TEAM_COLORS } from '@/constants/analysis-messages';
 import { useMonthSchedule } from '@/hooks/use-month-schedule';
@@ -56,7 +58,7 @@ const flightMs = (speed: number) => speed > 0 ? Math.round(FLIGHT_K / speed) : 1
 
 const GAME_KEYFRAMES = `
   @keyframes umpire-scale-in{0%{transform:scale(.7);opacity:0}100%{transform:scale(1);opacity:1}}
-  @keyframes umpire-shake{0%,100%{transform:translateX(0)}12%{transform:translateX(-6px)}25%{transform:translateX(5px)}37%{transform:translateX(-4px)}50%{transform:translateX(4px)}62%{transform:translateX(-3px)}75%{transform:translateX(2px)}}
+  @keyframes umpire-shake{0%,100%{transform:translate(0,0)}8%{transform:translate(-8px,2px)}16%{transform:translate(7px,-3px)}24%{transform:translate(-6px,2px)}32%{transform:translate(5px,-1px)}40%{transform:translate(-5px,1px)}50%{transform:translate(4px,-1px)}62%{transform:translate(-3px,1px)}75%{transform:translate(2px,0)}87%{transform:translate(-1px,0)}}
   @keyframes umpire-flash{0%{opacity:.45}100%{opacity:0}}
   @keyframes umpire-dot-ping{0%{transform:scale(1)}50%{transform:scale(1.5)}100%{transform:scale(1)}}
 `;
@@ -243,26 +245,29 @@ const JudgeButtons: FC<{
 const RevealBanner: FC<{ correct: boolean; answer: string; isCloseCall?: boolean }> = ({ correct, answer, isCloseCall: close }) => (
   <div
     className={cn(
-      'flex flex-col items-center justify-center gap-1 rounded-2xl px-5 py-4 font-bold backdrop-blur-sm',
-      correct
-        ? 'bg-green-500/15 text-green-500 dark:text-green-400'
-        : 'bg-red-500/15 text-red-500 dark:text-red-400',
+      'flex items-center gap-3 rounded-2xl px-5 py-3 shadow-lg backdrop-blur-sm',
+      correct ? 'bg-green-500/90' : 'bg-red-500/90',
     )}
-    style={{ animation: 'umpire-scale-in 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}
+    style={{ animation: 'umpire-scale-in 0.25s cubic-bezier(0.34,1.56,0.64,1)' }}
   >
-    <div className="flex items-center gap-3">
-      <span className="text-[22px] font-black tracking-tight">
-        {correct ? 'CORRECT!' : 'WRONG'}
+    <span className="text-[24px] font-black text-white">
+      {correct ? '○' : '✕'}
+    </span>
+    <div className="flex flex-col">
+      <span className="text-[16px] font-black leading-tight tracking-tight text-white">
+        {correct ? 'CORRECT' : 'WRONG'}
       </span>
-      <span className="text-[12px] font-semibold opacity-50">
-        {answer === 'ball' ? 'BALL' : 'STRIKE'}
-      </span>
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] font-bold text-white/60">
+          {answer === 'ball' ? 'BALL' : 'STRIKE'}
+        </span>
+        {close && (
+          <span className="text-[9px] font-bold tracking-widest text-amber-300">
+            CLOSE CALL
+          </span>
+        )}
+      </div>
     </div>
-    {close && (
-      <span className="text-[10px] font-bold tracking-widest text-amber-400">
-        CLOSE CALL
-      </span>
-    )}
   </div>
 );
 
@@ -388,9 +393,11 @@ const DifficultyStars: FC<{ level: number }> = ({ level }) => (
 
 const ResultScreen: FC<{
   judgments: Judgment[];
+  selectedGame: ScheduleGame | null;
+  inningLabel: string;
   onRetry: () => void;
   onBack: () => void;
-}> = ({ judgments, onRetry, onBack }) => {
+}> = ({ judgments, selectedGame, inningLabel, onRetry, onBack }) => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     const raf = requestAnimationFrame(() => setMounted(true));
@@ -441,6 +448,67 @@ const ResultScreen: FC<{
 
   const ballPct = balls.length > 0 ? Math.round((ballCorrect / balls.length) * 100) : 0;
   const strikePct = strikes.length > 0 ? Math.round((strikeCorrect / strikes.length) * 100) : 0;
+
+  // 공유 텍스트 생성
+  const handleShare = useCallback(async () => {
+    const away = selectedGame ? (TEAM_COLORS[selectedGame.awayCode]?.shortName ?? selectedGame.awayCode) : '';
+    const home = selectedGame ? (TEAM_COLORS[selectedGame.homeCode]?.shortName ?? selectedGame.homeCode) : '';
+    const matchInfo = selectedGame ? `${away} vs ${home} ${inningLabel}` : '';
+
+    const lines = [
+      '643 — 공을 네모 안에 넣어',
+      matchInfo && `${matchInfo}`,
+      '',
+      `${grade.label} — ${pct}점`,
+      `정답 ${correct}/${total} · 연속 ${maxStreak}`,
+      `Ball ${ballPct}% · Strike ${strikePct}%`,
+      avgReactionMs > 0 ? `평균 반응 ${(avgReactionMs / 1000).toFixed(1)}초` : '',
+      '',
+      '나도 해보기',
+      'https://puttheballinthebox.com/',
+    ].filter(Boolean);
+    const text = lines.join('\n');
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: '643 — 공을 네모 안에 넣어', text });
+        return;
+      } catch (e) {
+        if (e instanceof Error && e.name === 'AbortError') return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('결과가 클립보드에 복사되었습니다');
+    } catch {
+      toast.error('복사에 실패했습니다');
+    }
+  }, [selectedGame, inningLabel, grade.label, pct, correct, total, maxStreak, ballPct, strikePct, avgReactionMs]);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const handleSave = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      const blob = await generateUmpireShareCard({
+        pct, gradeLabel: grade.label, gradeSub: grade.sub, gradeColor,
+        correct, total, maxStreak, avgReactionMs,
+        ballPct, strikePct, avgDifficulty,
+        judgments,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '643-umpire.png';
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('이미지가 저장되었습니다');
+    } catch {
+      toast.error('이미지 저장에 실패했습니다');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [pct, grade, gradeColor, correct, total, maxStreak, avgReactionMs, ballPct, strikePct, avgDifficulty, judgments]);
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-8 pt-4">
@@ -580,16 +648,33 @@ const ResultScreen: FC<{
 
       {/* Actions */}
       <div className="mt-6 flex flex-col gap-2.5" style={stagger(0.75)}>
-        <button
-          onClick={onRetry}
-          className="flex h-[52px] items-center justify-center gap-2 rounded-2xl bg-accent text-[14px] font-bold text-accent-foreground shadow-sm transition-all hover:bg-accent/90 active:scale-[0.97]"
-        >
-          <RotateCcw className="h-4 w-4" />
-          다시 도전
-        </button>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            onClick={handleShare}
+            className="flex h-12 items-center justify-center gap-1.5 rounded-2xl bg-card text-[12px] font-bold text-foreground transition-all active:scale-[0.97]"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            공유
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex h-12 items-center justify-center gap-1.5 rounded-2xl bg-card text-[12px] font-bold text-foreground transition-all active:scale-[0.97] disabled:opacity-50"
+          >
+            {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            저장
+          </button>
+          <button
+            onClick={onRetry}
+            className="flex h-12 items-center justify-center gap-1.5 rounded-2xl bg-accent text-[12px] font-bold text-accent-foreground shadow-sm transition-all hover:bg-accent/90 active:scale-[0.97]"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            다시
+          </button>
+        </div>
         <button
           onClick={onBack}
-          className="flex h-[48px] items-center justify-center rounded-2xl text-[13px] font-medium text-muted-foreground transition-all hover:bg-muted/60 active:scale-[0.97]"
+          className="flex h-11 items-center justify-center rounded-2xl text-[13px] font-medium text-muted-foreground transition-all hover:bg-muted/60 active:scale-[0.97]"
         >
           다른 경기 선택
         </button>
@@ -920,14 +1005,23 @@ export const UmpireGamePage: FC = () => {
     setLastResult({ correct, answer: currentItem.answer, isCloseCall: currentItem.isCloseCAll });
     setPlayState('revealing');
 
-    // Haptic feedback
+    // Haptic feedback — Duolingo-style
     if (navigator.vibrate) {
-      navigator.vibrate(correct ? [25] : [40, 25, 40]);
+      if (correct) {
+        // 정답: 짧고 경쾌한 더블탭
+        navigator.vibrate([15, 50, 15]);
+      } else if (guess === 'timeout') {
+        // 타임아웃: 길게 한 번
+        navigator.vibrate([200]);
+      } else {
+        // 오답: 강하고 불쾌한 트리플 버즈
+        navigator.vibrate([60, 40, 60, 40, 80]);
+      }
     }
-    // Screen shake on wrong
+    // Screen shake on wrong — 더 강하게
     if (!correct) {
       setShaking(true);
-      setTimeout(() => setShaking(false), 500);
+      setTimeout(() => setShaking(false), 600);
     }
 
     revealRef.current = setTimeout(() => advanceToNext(), REVEAL_MS);
@@ -1218,128 +1312,129 @@ export const UmpireGamePage: FC = () => {
 
       {/* ── Playing Phase ── */}
       {phase === 'playing' && currentItem && (
-        <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-6">
-          {/* Scoreboard */}
-          {selectedGame && (
-            <div className="shrink-0 pt-2 pb-1">
-              <ScoreboardBar
-                game={selectedGame}
-                inningKey={selectedInningKey}
-                balls={currentItem.balls}
-                strikes={currentItem.strikes}
-                outs={currentItem.outs}
-                pitcherName={currentPitcherName}
-                pitchNum={currentIdx + 1}
-                batterName={currentItem.batterName}
-                seasonAvg={currentItem.seasonAvg}
-                batterHitType={currentItem.batterHitType}
-                streak={streak}
-              />
-            </div>
-          )}
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-4">
+          {/* ── Top: Scoreboard + Dots ── */}
+          <div className="shrink-0">
+            {selectedGame && (
+              <div className="pt-2 pb-1">
+                <ScoreboardBar
+                  game={selectedGame}
+                  inningKey={selectedInningKey}
+                  balls={currentItem.balls}
+                  strikes={currentItem.strikes}
+                  outs={currentItem.outs}
+                  pitcherName={currentPitcherName}
+                  pitchNum={currentIdx + 1}
+                  batterName={currentItem.batterName}
+                  seasonAvg={currentItem.seasonAvg}
+                  batterHitType={currentItem.batterHitType}
+                  streak={streak}
+                />
+              </div>
+            )}
 
-          {/* Progress dots */}
-          <div className="flex shrink-0 items-center justify-center gap-1 py-2">
-            {pitchQueue.map((_, i) => {
-              const j = judgments[i];
-              const isCurrent = i === currentIdx;
-              return (
-                <span
-                  key={i}
-                  className={cn(
-                    'rounded-full transition-all duration-300',
-                    isCurrent ? 'h-2.5 w-2.5' : 'h-1.5 w-1.5',
-                  )}
+            {/* Progress dots */}
+            <div className="flex items-center justify-center gap-0.5 overflow-x-auto py-1.5 scrollbar-none">
+              {pitchQueue.map((_, i) => {
+                const j = judgments[i];
+                const isCurrent = i === currentIdx;
+                return (
+                  <span
+                    key={i}
+                    className={cn(
+                      'shrink-0 rounded-full transition-all duration-300',
+                      isCurrent ? 'h-2.5 w-2.5' : 'h-1.5 w-1.5',
+                    )}
+                    style={{
+                      backgroundColor: j
+                        ? j.correct
+                          ? '#4ade80'
+                          : '#ef4444'
+                        : isCurrent
+                          ? 'currentColor'
+                          : undefined,
+                      opacity: j || isCurrent ? 1 : 0.1,
+                      boxShadow: isCurrent ? '0 0 6px rgba(255,255,255,0.3)' : undefined,
+                      animation: isCurrent ? 'umpire-dot-ping 1.5s ease-in-out infinite' : undefined,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── Center: UmpireView (fills remaining space) ── */}
+          <div className="relative min-h-0 flex-1">
+            <div
+              className={cn(
+                'relative h-full overflow-hidden rounded-2xl border bg-muted/10 transition-[border-color] duration-500',
+                streak >= 10
+                  ? 'border-red-500/50'
+                  : streak >= 5
+                    ? 'border-amber-500/40'
+                    : streak >= 3
+                      ? 'border-green-500/30'
+                      : 'border-border/30',
+              )}
+              style={shaking ? { animation: 'umpire-shake 0.6s ease-out' } : undefined}
+            >
+              <UmpireView
+                pitches={[currentItem.pitch]}
+                currentPitchIndex={0}
+                phase={umpirePhase}
+                progress={animProgress}
+                showZone={playState === 'revealing'}
+                cameraOffset={cameraOffset}
+              />
+              {/* Reveal flash (캔버스 위 색상 플래시만 — 빠르게 사라짐) */}
+              {playState === 'revealing' && lastResult && (
+                <div
+                  className="pointer-events-none absolute inset-0"
                   style={{
-                    backgroundColor: j
-                      ? j.correct
-                        ? '#4ade80'
-                        : '#ef4444'
-                      : isCurrent
-                        ? 'currentColor'
-                        : undefined,
-                    opacity: j || isCurrent ? 1 : 0.1,
-                    boxShadow: isCurrent ? '0 0 6px rgba(255,255,255,0.3)' : undefined,
-                    animation: isCurrent ? 'umpire-dot-ping 1.5s ease-in-out infinite' : undefined,
+                    backgroundColor: lastResult.correct ? '#22c55e' : '#ef4444',
+                    animation: 'umpire-flash 0.4s ease-out forwards',
                   }}
                 />
-              );
-            })}
-          </div>
+              )}
 
-          {/* UmpireView */}
-          <div
-            className={cn(
-              'relative shrink-0 overflow-hidden rounded-2xl border bg-muted/10 transition-[border-color] duration-500',
-              streak >= 10
-                ? 'border-red-500/50'
-                : streak >= 5
-                  ? 'border-amber-500/40'
-                  : streak >= 3
-                    ? 'border-green-500/30'
-                    : 'border-border/30',
-            )}
-            style={shaking ? { animation: 'umpire-shake 0.5s ease-out' } : undefined}
-          >
-            <UmpireView
-              pitches={[currentItem.pitch]}
-              currentPitchIndex={0}
-              phase={umpirePhase}
-              progress={animProgress}
-              showZone={playState === 'revealing'}
-              cameraOffset={cameraOffset}
-            />
-            {/* Result flash overlay */}
-            {playState === 'revealing' && lastResult && (
-              <div
-                className="pointer-events-none absolute inset-0 rounded-2xl"
-                style={{
-                  backgroundColor: lastResult.correct ? '#22c55e' : '#ef4444',
-                  animation: 'umpire-flash 0.5s ease-out forwards',
-                }}
-              />
-            )}
-          </div>
+              {/* (reveal banner is below canvas, above buttons) */}
+            </div>
 
-          {/* Pitch info */}
-          <div className="shrink-0 py-2 text-center">
-            {(playState === 'judging' || playState === 'revealing') &&
-            currentItem.pitch.speed > 0 ? (
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-[16px] font-black tabular-nums">
+            {/* Pitch info overlay — 우측 상단 */}
+            {(playState === 'judging' || playState === 'revealing') && currentItem.pitch.speed > 0 && (
+              <div className="pointer-events-none absolute top-3 right-3 flex items-center gap-1.5 rounded-lg bg-background/70 px-2.5 py-1 backdrop-blur-sm">
+                <span className="text-[14px] font-black tabular-nums">
                   {currentItem.pitch.speed}
-                  <span className="text-[10px] font-medium text-muted-foreground/40">km/h</span>
+                  <span className="text-[9px] font-medium text-muted-foreground/50">km/h</span>
                 </span>
                 {currentItem.pitch.type && (
-                  <span className="text-[12px] font-medium text-muted-foreground/60">
+                  <span className="text-[10px] font-medium text-muted-foreground/60">
                     {currentItem.pitch.type}
                   </span>
                 )}
               </div>
-            ) : (
-              <div className="h-[24px]" />
             )}
           </div>
 
-          {/* Reveal banner */}
-          {playState === 'revealing' && lastResult && (
-            <div className="shrink-0 mb-2">
-              <RevealBanner correct={lastResult.correct} answer={lastResult.answer} isCloseCall={lastResult.isCloseCall} />
+          {/* ── Bottom: Reveal + Timer + Buttons (고정, 항상 하단) ── */}
+          <div className="shrink-0 pt-2">
+            {/* Reveal banner — 버튼 바로 위 */}
+            <div className="mb-2 flex justify-center" style={{ minHeight: 52 }}>
+              {playState === 'revealing' && lastResult ? (
+                <RevealBanner correct={lastResult.correct} answer={lastResult.answer} isCloseCall={lastResult.isCloseCall} />
+              ) : null}
             </div>
-          )}
 
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Timer */}
-          {playState === 'judging' && (
-            <div className="shrink-0 mb-3 px-2">
-              <TimerBar remaining={timer} total={JUDGE_TIME} />
+            {/* Timer */}
+            <div className="mb-2.5 px-1">
+              {playState === 'judging' ? (
+                <TimerBar remaining={timer} total={JUDGE_TIME} />
+              ) : (
+                <div className="h-2" />
+              )}
             </div>
-          )}
 
-          {/* Judgment buttons */}
-          <div className="shrink-0">
+            {/* Judgment buttons */}
             <JudgeButtons
               onJudge={handleJudge}
               disabled={playState !== 'judging'}
@@ -1352,6 +1447,8 @@ export const UmpireGamePage: FC = () => {
       {phase === 'result' && (
         <ResultScreen
           judgments={judgments}
+          selectedGame={selectedGame}
+          inningLabel={formatInningLabel(selectedInningKey)}
           onRetry={startGame}
           onBack={() => setPhase('select')}
         />
