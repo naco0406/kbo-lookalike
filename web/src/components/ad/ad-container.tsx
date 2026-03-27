@@ -88,7 +88,7 @@ export const AdContainer: FC<AdContainerProps> = ({ type, unitId, className }) =
     });
     observer.observe(ins, { attributes: true, attributeFilter: ['style'] });
 
-    // ── 5. 타임아웃 — 광고 미렌더링 시 조용히 정리 ──
+    // ── 6. 타임아웃 — 광고 미렌더링 시 조용히 정리 ──
     const failTimer = window.setTimeout(() => {
       if (ins.style.display === 'none') {
         setAdFailed(true);
@@ -96,10 +96,15 @@ export const AdContainer: FC<AdContainerProps> = ({ type, unitId, className }) =
       }
     }, 5000);
 
-    // ── 6. Cleanup ──
+    // ── 7. Cleanup ──
     return () => {
       observer.disconnect();
       window.clearTimeout(failTimer);
+
+      // ba.min.js 내부 레지스트리 정리 (비공식 API)
+      // destroy 없이 DOM만 제거하면 재방문 시 unitId가 "처리 완료"로 남아 광고가 안 뜬다
+      const globalAdfit = (window as { adfit?: { destroy: (id: string) => void } }).adfit;
+      if (globalAdfit) globalAdfit.destroy(unitId);
 
       if (wrapper.contains(script)) wrapper.removeChild(script);
       if (wrapper.contains(ins)) wrapper.removeChild(ins);
