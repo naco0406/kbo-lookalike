@@ -1,4 +1,4 @@
-import type { FC, ReactNode } from 'react';
+import type { FC } from 'react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { ChevronRight, Loader2, User } from 'lucide-react';
@@ -133,112 +133,135 @@ const NoGames: FC = () => (
     <p className="text-[13px] text-muted-foreground">오늘은 경기가 없는 날이에요</p>
     <Link
       to="/schedule"
-      className="mt-2 text-[12px] font-medium text-stadium-blue transition-colors hover:text-stadium-blue/80"
+      className="mt-2 text-[12px] font-medium text-accent transition-colors hover:text-accent/80"
     >
       전체 일정 보기 →
     </Link>
   </div>
 );
 
-// ── Feature cards ────────────────────────────────────────────────────────────
+// ── Hero cards (Toss-style: vertical, bold, spacious) ───────────────────────
 
-interface FeatureItem {
+interface HeroItem {
   id: string;
+  emoji: string;
   title: string;
   sub: string;
   cta: string;
-  href: string | null;
-  available: boolean;
-  badge?: string;
-  accentVar: string; // Tailwind class referencing CSS var
-  icon: ReactNode;
+  href: string;
 }
 
-const FEATURES: FeatureItem[] = [
+const HEROES: HeroItem[] = [
   {
     id: 'lookalike',
+    emoji: '⚾',
     title: '혹시 선수세요?',
-    sub: 'AI가 닮은 선수를 찾아줘요',
-    cta: '사진 올리기',
+    sub: '사진 한 장이면\n닮은 선수 Top 5를 찾아드려요',
+    cta: '닮은꼴 찾기',
     href: '/lookalike',
-    available: true,
-    accentVar: 'stadium-green',
-    icon: <span className="text-[24px]">🧑‍🤝‍🧑</span>,
   },
   {
     id: 'umpire',
+    emoji: '🧤',
     title: '공을 네모 안에 넣어',
-    sub: '볼/스트라이크 판정 게임',
+    sub: '볼인지 스트라이크인지\n당신이 판정해보세요',
     cta: '판정하러 가기',
     href: '/umpire-game',
-    available: true,
-    accentVar: 'stadium-blue',
-    icon: <span className="text-[24px]">🧤</span>,
-  },
-  {
-    id: 'schedule',
-    title: '몇 대 몇이야?',
-    sub: 'KBO 전체 일정·스코어',
-    cta: '일정 보기',
-    href: '/schedule',
-    available: true,
-    accentVar: 'stadium-brown',
-    icon: <span className="text-[24px]">📋</span>,
-  },
-  {
-    id: 'fortune',
-    title: '감독님 선발은요?',
-    sub: '야구 운세',
-    cta: '',
-    href: null,
-    available: false,
-    badge: '준비 중',
-    accentVar: 'muted-foreground',
-    icon: <span className="text-[24px]">🔮</span>,
   },
 ];
 
-const FeatureCard: FC<{ feature: FeatureItem; delay: number }> = ({ feature, delay }) => {
+const HeroCard: FC<{ hero: HeroItem; delay: number; primary?: boolean }> = ({ hero, delay, primary }) => (
+  <Link
+    to={hero.href}
+    viewTransition
+    className={cn(
+      'animate-reveal-up group relative block overflow-hidden rounded-3xl transition-all duration-200 active:scale-[0.98]',
+      primary ? 'bg-accent' : 'bg-card',
+    )}
+    style={{ animationDelay: `${delay}ms` }}
+  >
+    <div className="px-6 pt-6 pb-5">
+      <span className="text-[36px] leading-none">{hero.emoji}</span>
+      <p className={cn(
+        'mt-3 text-[22px] font-extrabold leading-tight tracking-tight',
+        primary ? 'text-accent-foreground' : 'text-foreground',
+      )}>
+        {hero.title}
+      </p>
+      <p className={cn(
+        'mt-2 whitespace-pre-line text-[14px] leading-relaxed',
+        primary ? 'text-accent-foreground/70' : 'text-muted-foreground',
+      )}>
+        {hero.sub}
+      </p>
+      <div className={cn(
+        'mt-5 inline-flex items-center rounded-full px-5 py-2.5 text-[14px] font-bold transition-colors',
+        primary
+          ? 'bg-accent-foreground/20 text-accent-foreground group-hover:bg-accent-foreground/30'
+          : 'bg-accent text-accent-foreground group-hover:bg-accent/90',
+      )}>
+        {hero.cta}
+      </div>
+    </div>
+  </Link>
+);
+
+// ── More features ────────────────────────────────────────────────────────────
+
+interface MoreItem {
+  id: string;
+  icon: string;
+  title: string;
+  sub: string;
+  href: string | null;
+  available: boolean;
+  badge?: string;
+}
+
+const MORE_FEATURES: MoreItem[] = [
+  {
+    id: 'schedule',
+    icon: '📋',
+    title: '몇 대 몇이야?',
+    sub: 'KBO 전체 일정·스코어',
+    href: '/schedule',
+    available: true,
+  },
+  {
+    id: 'fortune',
+    icon: '🔮',
+    title: '감독님 선발은요?',
+    sub: '야구 운세',
+    href: null,
+    available: false,
+    badge: '준비 중',
+  },
+];
+
+const MoreCard: FC<{ item: MoreItem; delay: number }> = ({ item, delay }) => {
   const inner = (
-    <div className="relative flex h-full flex-col justify-between p-4">
-      {/* Background accent circle */}
-      <div
-        className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-current opacity-[0.06]"
-        style={{ color: `var(--${feature.accentVar})` }}
-      />
-
-      <div>
-        <div className="mb-2.5">{feature.icon}</div>
-        <p className="text-[15px] font-bold leading-tight">{feature.title}</p>
-        <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{feature.sub}</p>
+    <div className="flex items-center gap-3 p-3.5">
+      <span className="text-[20px]">{item.icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[14px] font-bold leading-tight">{item.title}</p>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">{item.sub}</p>
       </div>
-
-      <div className="mt-4">
-        {feature.available ? (
-          <span
-            className="text-[11px] font-semibold"
-            style={{ color: `var(--${feature.accentVar})` }}
-          >
-            {feature.cta} →
-          </span>
-        ) : (
-          <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-            {feature.badge}
-          </span>
-        )}
-      </div>
+      {item.available ? (
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50" />
+      ) : (
+        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+          {item.badge}
+        </span>
+      )}
     </div>
   );
 
-  if (feature.available && feature.href) {
+  if (item.available && item.href) {
     return (
       <Link
-        to={feature.href}
+        to={item.href}
         viewTransition
-        className={cn(
-          'animate-reveal-up overflow-hidden rounded-2xl bg-card transition-all duration-200',
-          'hover:-translate-y-0.5 hover:bg-card/80 active:scale-[0.97]',
-        )}
+        className="animate-reveal-up block rounded-2xl bg-card transition-all duration-200 hover:bg-card/80 active:scale-[0.98]"
         style={{ animationDelay: `${delay}ms` }}
       >
         {inner}
@@ -248,7 +271,7 @@ const FeatureCard: FC<{ feature: FeatureItem; delay: number }> = ({ feature, del
 
   return (
     <div
-      className="animate-reveal-up overflow-hidden rounded-2xl bg-card/50 opacity-45"
+      className="animate-reveal-up rounded-2xl bg-card/50 opacity-45"
       style={{ animationDelay: `${delay}ms` }}
     >
       {inner}
@@ -293,21 +316,21 @@ export const LandingPage: FC = () => {
     [games, teamCode],
   );
 
-  // 환영 메시지: 응원팀이 있으면 오늘 경기 여부에 따라 메시지 생성
-  const welcomeMessage = useMemo(() => {
+  // 컨텍스트 라인: 팀 있으면 경기 한 줄, 없으면 null (CTA로 대체)
+  const contextMessage = useMemo(() => {
     if (!teamInfo || !teamCode) return null;
     const nickname = profile.nickname || null;
     const myGame = games.find((g) => isMyTeamGame(g, teamCode));
-    const greeting = nickname ? `${nickname}님,` : '';
+    const prefix = nickname ? `${nickname}님, ` : '';
 
     if (myGame) {
       const isLive = myGame.status === 'live';
       const isDone = myGame.status === 'completed';
-      if (isLive) return `${greeting} ${teamInfo.shortName} 경기 진행 중이에요`.trim();
-      if (isDone) return `${greeting} 오늘 ${teamInfo.shortName} 경기 끝났어요`.trim();
-      return `${greeting} 오늘 ${teamInfo.shortName} ${myGame.time} 경기 있어요`.trim();
+      if (isLive) return `${prefix}${teamInfo.shortName} 경기 진행 중이에요`;
+      if (isDone) return `${prefix}오늘 ${teamInfo.shortName} 경기 끝났어요`;
+      return `${prefix}오늘 ${teamInfo.shortName} ${myGame.time} 경기 있어요`;
     }
-    return `${greeting} 오늘은 ${teamInfo.shortName} 쉬는 날이에요`.trim();
+    return `${prefix}오늘은 ${teamInfo.shortName} 쉬는 날이에요`;
   }, [teamInfo, teamCode, profile.nickname, games]);
 
   return (
@@ -341,18 +364,34 @@ export const LandingPage: FC = () => {
       {/* ── Content ── */}
       <main className="mx-auto w-full max-w-md flex-1 px-5 pb-16">
 
-        {/* ── Welcome message ── */}
-        {welcomeMessage && !loading && (
-          <div className="mt-3 mb-1 animate-reveal-up">
-            <p className="text-[13px] text-muted-foreground">{welcomeMessage}</p>
-          </div>
-        )}
+        {/* ── Context line ── */}
+        <div className="mt-4 mb-6 animate-reveal-up">
+          {contextMessage && !loading ? (
+            <p className="text-[15px] font-medium text-muted-foreground">{contextMessage}</p>
+          ) : !teamCode ? (
+            <Link
+              to="/profile"
+              viewTransition
+              className="inline-flex items-center gap-1 text-[14px] font-semibold text-accent transition-colors hover:text-accent/80"
+            >
+              응원하는 팀을 설정해보세요
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          ) : null}
+        </div>
+
+        {/* ── Hero: 메인 콘텐츠 ── */}
+        <section className="mb-10 flex flex-col gap-3">
+          {HEROES.map((hero, i) => (
+            <HeroCard key={hero.id} hero={hero} delay={i * 80} primary={i === 0} />
+          ))}
+        </section>
 
         {/* ── Today's Games ── */}
-        <section className={cn('mb-10', welcomeMessage && !loading ? 'mt-2' : 'mt-4')}>
-          <div className="mb-3 flex items-center justify-between">
+        <section className="mb-10">
+          <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h2 className="text-[15px] font-bold tracking-tight">오늘의 경기</h2>
+              <h2 className="text-[17px] font-extrabold tracking-tight">오늘의 경기</h2>
               {loading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
             </div>
             <Link
@@ -387,21 +426,21 @@ export const LandingPage: FC = () => {
           )}
         </section>
 
-        {/* ── Features ── */}
-        <section>
-          <h2 className="mb-3 text-[15px] font-bold tracking-tight">더 즐기기</h2>
-          <div className="grid grid-cols-2 gap-2.5">
-            {FEATURES.map((f, i) => (
-              <FeatureCard key={f.id} feature={f} delay={200 + i * 50} />
-            ))}
-          </div>
-        </section>
-
-        {/* ── Ad — 기능 카드 하단, 페이지 최하단 직전 ── */}
+        {/* ── Ad ── */}
         <AdContainer
           type={AD_SLOTS.home.type}
           unitId={AD_SLOTS.home.unitId}
         />
+
+        {/* ── 더 즐기기 ── */}
+        <section className="mt-4">
+          <h2 className="mb-4 text-[17px] font-extrabold tracking-tight">더 즐기기</h2>
+          <div className="flex flex-col gap-2">
+            {MORE_FEATURES.map((f, i) => (
+              <MoreCard key={f.id} item={f} delay={i * 50} />
+            ))}
+          </div>
+        </section>
       </main>
     </div>
   );
