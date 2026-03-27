@@ -7,10 +7,11 @@ import { cn } from '@/lib/utils';
 interface MatchCardProps {
   match: MatchResult;
   rank: number;
+  isMyTeam?: boolean;
   onImageClick?: () => void;
 }
 
-export const MatchCard: FC<MatchCardProps> = ({ match, rank, onImageClick }) => {
+export const MatchCard: FC<MatchCardProps> = ({ match, rank, isMyTeam, onImageClick }) => {
   const { player, similarity } = match;
   const percent = (Math.round(similarity * 1000) / 10).toFixed(1);
 
@@ -19,10 +20,16 @@ export const MatchCard: FC<MatchCardProps> = ({ match, rank, onImageClick }) => 
       type="button"
       onClick={onImageClick}
       className={cn(
-        'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors active:bg-muted/30',
+        'relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors active:bg-muted/30',
         rank === 1 && 'bg-card shadow-sm ring-1 ring-border',
+        isMyTeam && rank !== 1 && 'bg-accent/[0.04]',
       )}
     >
+      {/* My team left accent */}
+      {isMyTeam && (
+        <div className="absolute inset-y-1 left-0 w-[2px] rounded-full bg-accent/40" />
+      )}
+
       {/* Rank + Photo */}
       <div className="relative shrink-0">
         <PlayerImage
@@ -44,9 +51,16 @@ export const MatchCard: FC<MatchCardProps> = ({ match, rank, onImageClick }) => 
 
       {/* Name + Team */}
       <div className="min-w-0 flex-1">
-        <p className={cn('truncate font-semibold', rank === 1 ? 'text-[15px]' : 'text-[13px]')}>
-          {player.name}
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className={cn('truncate font-semibold', rank === 1 ? 'text-[15px]' : 'text-[13px]')}>
+            {player.name}
+          </p>
+          {isMyTeam && (
+            <span className="shrink-0 rounded-full bg-accent/15 px-1.5 py-px text-[9px] font-semibold text-accent">
+              MY
+            </span>
+          )}
+        </div>
         <p className="text-muted-foreground truncate text-[11px]">
           {getTeamDisplayName(player.teamCode)} · {player.position}
         </p>

@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { useAppState, useAppDispatch } from '@/context/app-state-context';
@@ -12,7 +12,8 @@ import { useAnimatedNumber } from '@/hooks/use-animated-number';
 import { generateShareCard } from '@/lib/share-card';
 import { RotateCcw, Loader2, Download, Copy } from 'lucide-react';
 import type { MatchResult, Classification } from '@/types/player';
-import { getTeamDisplayName } from '@/constants/analysis-messages';
+import { getTeamDisplayName, TEAM_COLORS } from '@/constants/analysis-messages';
+import { useProfile } from '@/hooks/use-profile';
 import { AdContainer } from '@/components/ad/ad-container';
 import { AD_SLOTS } from '@/components/ad/ad-slots';
 
@@ -27,6 +28,7 @@ export const ResultPage: FC = () => {
   const state = useAppState();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { profile } = useProfile();
 
   const handleReset = useCallback(() => {
     dispatch({ type: 'RESET' });
@@ -50,6 +52,7 @@ export const ResultPage: FC = () => {
       topPercent={topPercent}
       top={top}
       classification={classification}
+      myTeamCode={profile.favoriteTeam}
       onReset={handleReset}
     />
   );
@@ -63,6 +66,7 @@ interface ResultContentProps {
   topPercent: number;
   top: MatchResult;
   classification?: Classification;
+  myTeamCode: string | null;
   onReset: () => void;
 }
 
@@ -74,6 +78,42 @@ interface MorphTarget {
   name: string;
 }
 
+/** 응원팀 선수가 결과에 있을 때 표시할 한 줄 문구 */
+const TOP1_REACTIONS = [
+  (team: string) => `${team} 선수가 1위네요, 반갑죠?`,
+  (team: string) => `1위가 ${team}이라니, 기분 좋은 결과`,
+  (team: string) => `역시 ${team}, 어딜 가나 만나네요`,
+];
+
+const TOP5_REACTIONS = [
+  (team: string, name: string) => `${team} ${name} 선수도 Top 5에 있네요`,
+  (team: string, name: string) => `${name} 선수 발견, ${team} 인연은 어디든`,
+];
+
+const getMyTeamReaction = (
+  teamCode: string | null,
+  matches: MatchResult[],
+): string | null => {
+  if (!teamCode) return null;
+  const team = TEAM_COLORS[teamCode];
+  if (!team) return null;
+
+  // 1위가 내 팀
+  if (matches[0]?.player.teamCode === teamCode) {
+    const fn = TOP1_REACTIONS[Math.floor(Math.random() * TOP1_REACTIONS.length)];
+    return fn(team.shortName);
+  }
+
+  // Top 5 안에 내 팀 선수가 있음
+  const myTeamMatch = matches.find((m) => m.player.teamCode === teamCode);
+  if (myTeamMatch) {
+    const fn = TOP5_REACTIONS[Math.floor(Math.random() * TOP5_REACTIONS.length)];
+    return fn(team.shortName, myTeamMatch.player.name);
+  }
+
+  return null;
+};
+
 const ResultContent: FC<ResultContentProps> = ({
   matches,
   previewUrl,
@@ -82,6 +122,7 @@ const ResultContent: FC<ResultContentProps> = ({
   topPercent,
   top,
   classification,
+  myTeamCode,
   onReset,
 }) => {
   const animatedPercent = useAnimatedNumber(topPercent, 1200, 1);
@@ -91,6 +132,9 @@ const ResultContent: FC<ResultContentProps> = ({
 
   const userDisplayUrl = croppedFaceUrl ?? previewUrl;
   const isExactMatch = (top.bonusBreakdown?.cosine ?? 0) >= EXACT_MATCH_THRESHOLD;
+  // useMemo로 감싸서 리렌더 시 문구가 바뀌지 않도록 안정화
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const myTeamReaction = useMemo(() => getMyTeamReaction(myTeamCode, matches), [myTeamCode, matches]);
 
   const openLightbox = useCallback(
     (src: string, alt: string, label?: string, sublabel?: string) => {
@@ -235,6 +279,16 @@ const ResultContent: FC<ResultContentProps> = ({
             {getTeamDisplayName(top.player.teamCode)} · {top.player.position}
           </p>
         </div>
+
+        {/* 응원팀 선수가 1위일 때 센스 있는 한 줄 */}
+        {myTeamReaction && !isExactMatch && (
+          <p
+            className="mt-2.5 animate-reveal-up text-center text-[12px] font-medium text-accent"
+            style={{ animationDelay: '500ms' }}
+          >
+            {myTeamReaction}
+          </p>
+        )}
       </div>
 
       {/* ── 야구 프로필 (컴팩트) ── */}
@@ -313,6 +367,7 @@ const ResultContent: FC<ResultContentProps> = ({
               <MatchCard
                 match={m}
                 rank={i + 1}
+                isMyTeam={!!myTeamCode && m.player.teamCode === myTeamCode}
                 onImageClick={() =>
                   alignedFaceUrl
                     ? openMorph(m.player.imageUrl, m.player.name)

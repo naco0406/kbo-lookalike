@@ -45,18 +45,27 @@ export const NOT_BASEBALL_FACE_CONTINUE = '그래도 가장 닮은 선수를 찾
 
 // ── 팀 컬러 매핑 ──
 // key: 레거시 DB 코드 (SK, OB, HT 등) → shortName: 현재 공식 약자
+// 출처: ko.wikipedia.org/wiki/틀:야구_주요_색, TheSportsDB, 팀 공식 사이트
 
-export const TEAM_COLORS: Record<string, { primary: string; bg: string; name: string; shortName: string }> = {
-  LG: { primary: '#C60C30', bg: '#C60C30', name: 'LG 트윈스', shortName: 'LG' },
-  SK: { primary: '#CE0E2D', bg: '#CE0E2D', name: 'SSG 랜더스', shortName: 'SSG' },
-  LT: { primary: '#002B5C', bg: '#002B5C', name: '롯데 자이언츠', shortName: '롯데' },
-  HT: { primary: '#EA0029', bg: '#EA0029', name: 'KIA 타이거즈', shortName: 'KIA' },
-  SS: { primary: '#074CA1', bg: '#074CA1', name: '삼성 라이온즈', shortName: '삼성' },
-  NC: { primary: '#315288', bg: '#315288', name: 'NC 다이노스', shortName: 'NC' },
-  WO: { primary: '#820024', bg: '#820024', name: '키움 히어로즈', shortName: '키움' },
-  HH: { primary: '#FF6600', bg: '#FF6600', name: '한화 이글스', shortName: '한화' },
-  KT: { primary: '#000000', bg: '#000000', name: 'KT WIZ', shortName: 'KT' },
-  OB: { primary: '#131230', bg: '#131230', name: '두산 베어스', shortName: '두산' },
+export interface TeamColor {
+  primary: string;     // 공식 1차 컬러
+  secondary: string;   // 공식 2차 컬러
+  bg: string;          // 로고 배경 (= primary)
+  name: string;
+  shortName: string;
+}
+
+export const TEAM_COLORS: Record<string, TeamColor> = {
+  LG: { primary: '#C30452', secondary: '#000000', bg: '#C30452', name: 'LG 트윈스', shortName: 'LG' },
+  SK: { primary: '#CE0E2D', secondary: '#FFB81C', bg: '#CE0E2D', name: 'SSG 랜더스', shortName: 'SSG' },
+  LT: { primary: '#041E42', secondary: '#D00F31', bg: '#041E42', name: '롯데 자이언츠', shortName: '롯데' },
+  HT: { primary: '#EA0029', secondary: '#06141F', bg: '#EA0029', name: 'KIA 타이거즈', shortName: 'KIA' },
+  SS: { primary: '#074CA1', secondary: '#C0C0C0', bg: '#074CA1', name: '삼성 라이온즈', shortName: '삼성' },
+  NC: { primary: '#315288', secondary: '#AF917B', bg: '#315288', name: 'NC 다이노스', shortName: 'NC' },
+  WO: { primary: '#570514', secondary: '#B07F4A', bg: '#570514', name: '키움 히어로즈', shortName: '키움' },
+  HH: { primary: '#FC4E00', secondary: '#07111F', bg: '#FC4E00', name: '한화 이글스', shortName: '한화' },
+  KT: { primary: '#000000', secondary: '#EB1C24', bg: '#000000', name: 'KT WIZ', shortName: 'KT' },
+  OB: { primary: '#1A1748', secondary: '#EB1D25', bg: '#1A1748', name: '두산 베어스', shortName: '두산' },
 };
 
 /** 레거시 DB teamCode → 현재 공식 팀 풀네임 */

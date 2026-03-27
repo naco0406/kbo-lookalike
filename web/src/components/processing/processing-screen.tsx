@@ -8,6 +8,7 @@ import { StagePosition } from './stage-position';
 import { StageTeam } from './stage-team';
 import { StageMatching } from './stage-matching';
 import { preloadMatchTileImages } from '@/ml/similarity';
+import { useProfile } from '@/hooks/use-profile';
 import { cn } from '@/lib/utils';
 
 type Stage = 'loading' | 'face-detection' | 'ai-analysis' | 'position' | 'team' | 'matching';
@@ -58,6 +59,7 @@ export const ProcessingScreen: FC<ProcessingScreenProps> = ({
   isBaseballFace,
   pendingMatches,
 }) => {
+  const { profile } = useProfile();
   const currentStage = stepToStage(step);
   const [displayedStage, setDisplayedStage] = useState<Stage>(currentStage);
   const [transitioning, setTransitioning] = useState(false);
@@ -165,6 +167,7 @@ export const ProcessingScreen: FC<ProcessingScreenProps> = ({
           <StageTeam
             teamResult={teamResult}
             isBaseballFace={isBaseballFace}
+            favoriteTeamCode={profile.favoriteTeam}
           />
         )}
         {displayedStage === 'matching' && (

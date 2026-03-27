@@ -15,15 +15,23 @@ import { cn } from '@/lib/utils';
 interface StageTeamProps {
   teamResult?: TeamClassification;
   isBaseballFace?: boolean;
+  favoriteTeamCode?: string | null;
 }
 
-export const StageTeam: FC<StageTeamProps> = ({ teamResult, isBaseballFace }) => {
+export const StageTeam: FC<StageTeamProps> = ({ teamResult, isBaseballFace, favoriteTeamCode }) => {
   const message = useMemo(() => pickRandom(STAGE_MESSAGES.teamClassify), []);
   const notBaseballMsg = useMemo(() => pickRandom(NOT_BASEBALL_FACE_MESSAGES), []);
   const decided = !!teamResult;
 
+  // 응원팀이 있으면 해당 팀 인덱스에서 시작
+  const startIdx = useMemo(() => {
+    if (!favoriteTeamCode) return 0;
+    const idx = TEAM_ORDER.indexOf(favoriteTeamCode as typeof TEAM_ORDER[number]);
+    return idx >= 0 ? idx : 0;
+  }, [favoriteTeamCode]);
+
   // 감속 룰렛: 150ms → 점진적 감속 → 500ms
-  const [highlightIdx, setHighlightIdx] = useState(0);
+  const [highlightIdx, setHighlightIdx] = useState(startIdx);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const speedRef = useRef(150);
 

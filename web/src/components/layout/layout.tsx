@@ -5,6 +5,7 @@ import { ChevronLeft } from 'lucide-react';
 import { AppStateProvider, useAppState, useAppDispatch } from '@/context/app-state-context';
 import { Toaster } from '@/components/ui/sonner';
 import { useTheme } from '@/hooks/use-theme';
+import { useTeamTheme } from '@/hooks/use-team-theme';
 import { startPreload } from '@/ml/preload';
 import { useScrollToTop } from '@/hooks/use-scroll-to-top';
 
@@ -60,6 +61,7 @@ const LayoutHeader: FC = () => {
 export const Layout: FC = () => {
   const { pathname } = useLocation();
   useTheme();
+  useTeamTheme();
   useScrollToTop();
 
   // /lookalike 진입 시 ONNX 모델 + 임베딩 프리로드 시작

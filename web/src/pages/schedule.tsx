@@ -9,6 +9,7 @@ import { TEAM_COLORS } from '@/constants/analysis-messages';
 import { useMonthSchedule } from '@/hooks/use-month-schedule';
 import type { ScheduleGame } from '@/hooks/use-schedule';
 import { GameDetailModal } from '@/components/schedule/game-detail-modal';
+import { useProfile } from '@/hooks/use-profile';
 import { AdContainer } from '@/components/ad/ad-container';
 import { AD_SLOTS } from '@/components/ad/ad-slots';
 
@@ -90,7 +91,7 @@ const StatusBadge: FC<{ game: ScheduleGame }> = ({ game }) => {
 
 // ── Game Card ──────────────────────────────────────────────────────────────────
 
-const GameCard: FC<{ game: ScheduleGame; delay: number; onClick?: () => void }> = ({ game, delay, onClick }) => {
+const GameCard: FC<{ game: ScheduleGame; delay: number; isMyTeam?: boolean; onClick?: () => void }> = ({ game, delay, isMyTeam, onClick }) => {
   const isLive = game.status === 'live';
   const isCompleted = game.status === 'completed';
   const hasScore = game.awayScore !== undefined && game.homeScore !== undefined;
@@ -106,12 +107,17 @@ const GameCard: FC<{ game: ScheduleGame; delay: number; onClick?: () => void }> 
     <Tag
       {...(isClickable ? { onClick, type: 'button' as const } : {})}
       className={cn(
-        'animate-reveal-up w-full overflow-hidden rounded-2xl border bg-card text-left',
+        'animate-reveal-up relative w-full overflow-hidden rounded-2xl border bg-card text-left',
         isLive && 'border-destructive/20',
+        isMyTeam && !isLive && 'border-accent/25',
         isClickable && 'cursor-pointer transition-colors hover:border-border hover:bg-card/80 active:scale-[0.99]',
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
+      {/* My team accent line */}
+      {isMyTeam && (
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-[3px] rounded-l-2xl bg-accent/50" />
+      )}
       {/* Live banner */}
       {isLive && (
         <div className="flex items-center gap-1.5 bg-destructive/5 px-4 py-1.5">
@@ -231,6 +237,7 @@ interface CalendarProps {
   gamesByDate: Record<string, ScheduleGame[]>;
   today: string;
   loading: boolean;
+  myTeamCode: string | null;
   onSelectDate: (date: string) => void;
   onPrevMonth: () => void;
   onNextMonth: () => void;
@@ -244,6 +251,7 @@ const Calendar: FC<CalendarProps> = ({
   gamesByDate,
   today,
   loading,
+  myTeamCode,
   onSelectDate,
   onPrevMonth,
   onNextMonth,
@@ -365,19 +373,25 @@ const Calendar: FC<CalendarProps> = ({
                   {day}
                 </span>
 
-                {/* 홈팀 팀 컬러 dot — 선택 시 white/45로 전환 */}
+                {/* 홈팀 팀 컬러 dot — 내 팀은 약간 크게, 선택 시 white/45로 전환 */}
                 <div className="flex h-[4px] items-center gap-[2px]">
-                  {dotGames.map((g) => (
-                    <span
-                      key={g.id}
-                      className="h-[3px] w-[3px] rounded-full"
-                      style={{
-                        backgroundColor: isSelected
-                          ? 'rgba(255,255,255,0.45)'
-                          : (TEAM_COLORS[g.homeCode]?.primary ?? '#aaa'),
-                      }}
-                    />
-                  ))}
+                  {dotGames.map((g) => {
+                    const isMy = !!myTeamCode && (g.awayCode === myTeamCode || g.homeCode === myTeamCode);
+                    return (
+                      <span
+                        key={g.id}
+                        className={cn(
+                          'rounded-full',
+                          isMy ? 'h-[4px] w-[4px]' : 'h-[3px] w-[3px]',
+                        )}
+                        style={{
+                          backgroundColor: isSelected
+                            ? isMy ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.45)'
+                            : (TEAM_COLORS[g.homeCode]?.primary ?? '#aaa'),
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               </button>
             );
@@ -394,13 +408,26 @@ const GamesPanel: FC<{
   date: string;
   games: ScheduleGame[];
   loading: boolean;
+  myTeamCode: string | null;
   onGameClick: (game: ScheduleGame) => void;
-}> = ({ date, games, loading, onGameClick }) => {
+}> = ({ date, games, loading, myTeamCode, onGameClick }) => {
   const label = new Intl.DateTimeFormat('ko-KR', {
     month: 'long',
     day: 'numeric',
     weekday: 'short',
   }).format(new Date(`${date}T00:00:00`));
+
+  // 응원팀 경기 최상단 정렬
+  const sorted = useMemo(() => {
+    if (!myTeamCode) return games;
+    return [...games].sort((a, b) => {
+      const aIsMy = a.awayCode === myTeamCode || a.homeCode === myTeamCode;
+      const bIsMy = b.awayCode === myTeamCode || b.homeCode === myTeamCode;
+      if (aIsMy && !bIsMy) return -1;
+      if (!aIsMy && bIsMy) return 1;
+      return 0;
+    });
+  }, [games, myTeamCode]);
 
   return (
     <section className="mt-5">
@@ -426,11 +453,12 @@ const GamesPanel: FC<{
         </div>
       ) : (
         <div className="flex flex-col gap-2.5">
-          {games.map((game, i) => (
+          {sorted.map((game, i) => (
             <GameCard
               key={game.id}
               game={game}
               delay={i * 40}
+              isMyTeam={!!myTeamCode && (game.awayCode === myTeamCode || game.homeCode === myTeamCode)}
               onClick={game.status === 'completed' || game.status === 'live' ? () => onGameClick(game) : undefined}
             />
           ))}
@@ -444,6 +472,7 @@ const GamesPanel: FC<{
 
 export const SchedulePage: FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { profile } = useProfile();
 
   // URL에 ?game=이 있으면 해당 날짜로 캘린더 초기화
   const initialFromUrl = useMemo(() => {
@@ -547,6 +576,7 @@ export const SchedulePage: FC = () => {
             gamesByDate={gamesByDate}
             today={getTodayStr()}
             loading={loading}
+            myTeamCode={profile.favoriteTeam}
             onSelectDate={setSelectedDate}
             onPrevMonth={() =>
               month === 0 ? goToMonth(year - 1, 11) : goToMonth(year, month - 1)
@@ -566,6 +596,7 @@ export const SchedulePage: FC = () => {
             date={selectedDate}
             games={selectedGames}
             loading={loading}
+            myTeamCode={profile.favoriteTeam}
             onGameClick={handleGameClick}
           />
         </div>

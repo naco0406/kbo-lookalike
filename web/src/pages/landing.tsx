@@ -1,5 +1,5 @@
 import type { FC, ReactNode } from 'react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { ChevronRight, Loader2, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,7 @@ const TeamLogo: FC<{ code: string; size?: 'sm' | 'md' }> = ({ code, size = 'md' 
   );
 };
 
-const GameCard: FC<{ game: ScheduleGame; delay: number; onClick?: () => void }> = ({ game, delay, onClick }) => {
+const GameCard: FC<{ game: ScheduleGame; delay: number; isMyTeam?: boolean; onClick?: () => void }> = ({ game, delay, isMyTeam, onClick }) => {
   const isLive = game.status === 'live';
   const isDone = game.status === 'completed';
   const isClickable = isDone || isLive;
@@ -43,10 +43,15 @@ const GameCard: FC<{ game: ScheduleGame; delay: number; onClick?: () => void }> 
         'animate-reveal-up group relative w-full overflow-hidden rounded-2xl px-5 py-3.5 text-left',
         'bg-card transition-all duration-200',
         isLive && 'ring-1 ring-destructive/25',
+        isMyTeam && !isLive && 'ring-1 ring-accent/20',
         isClickable && 'cursor-pointer active:scale-[0.98]',
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
+      {/* My team accent line */}
+      {isMyTeam && !isLive && (
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-accent/50" />
+      )}
       {/* Live accent line */}
       {isLive && (
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-destructive/60 to-transparent" />
@@ -264,10 +269,50 @@ const dateLabel = new Intl.DateTimeFormat('ko-KR', {
   weekday: 'short',
 }).format(today);
 
+/** 응원팀 경기를 최상단으로 정렬 */
+const sortGamesByTeam = (games: ScheduleGame[], teamCode: string | null): ScheduleGame[] => {
+  if (!teamCode) return games;
+  return [...games].sort((a, b) => {
+    const aIsMyTeam = a.awayCode === teamCode || a.homeCode === teamCode;
+    const bIsMyTeam = b.awayCode === teamCode || b.homeCode === teamCode;
+    if (aIsMyTeam && !bIsMyTeam) return -1;
+    if (!aIsMyTeam && bIsMyTeam) return 1;
+    return 0;
+  });
+};
+
+/** 응원팀 경기 여부 체크 */
+const isMyTeamGame = (game: ScheduleGame, teamCode: string | null): boolean =>
+  !!teamCode && (game.awayCode === teamCode || game.homeCode === teamCode);
+
 export const LandingPage: FC = () => {
   const { games, loading } = useSchedule();
   const { profile } = useProfile();
   const [detailGame, setDetailGame] = useState<ScheduleGame | null>(null);
+  const teamCode = profile.favoriteTeam;
+  const teamInfo = teamCode ? TEAM_COLORS[teamCode] : null;
+
+  const sortedGames = useMemo(
+    () => sortGamesByTeam(games, teamCode),
+    [games, teamCode],
+  );
+
+  // 환영 메시지: 응원팀이 있으면 오늘 경기 여부에 따라 메시지 생성
+  const welcomeMessage = useMemo(() => {
+    if (!teamInfo || !teamCode) return null;
+    const nickname = profile.nickname || null;
+    const myGame = games.find((g) => isMyTeamGame(g, teamCode));
+    const greeting = nickname ? `${nickname}님,` : '';
+
+    if (myGame) {
+      const isLive = myGame.status === 'live';
+      const isDone = myGame.status === 'completed';
+      if (isLive) return `${greeting} ${teamInfo.shortName} 경기 진행 중이에요`.trim();
+      if (isDone) return `${greeting} 오늘 ${teamInfo.shortName} 경기 끝났어요`.trim();
+      return `${greeting} 오늘 ${teamInfo.shortName} ${myGame.time} 경기 있어요`.trim();
+    }
+    return `${greeting} 오늘은 ${teamInfo.shortName} 쉬는 날이에요`.trim();
+  }, [teamInfo, teamCode, profile.nickname, games]);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -300,8 +345,15 @@ export const LandingPage: FC = () => {
       {/* ── Content ── */}
       <main className="mx-auto w-full max-w-md flex-1 px-5 pb-16">
 
+        {/* ── Welcome message ── */}
+        {welcomeMessage && !loading && (
+          <div className="mt-3 mb-1 animate-reveal-up">
+            <p className="text-[13px] text-muted-foreground">{welcomeMessage}</p>
+          </div>
+        )}
+
         {/* ── Today's Games ── */}
-        <section className="mt-4 mb-10">
+        <section className={cn('mb-10', welcomeMessage && !loading ? 'mt-2' : 'mt-4')}>
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-[15px] font-bold tracking-tight">오늘의 경기</h2>
@@ -322,11 +374,12 @@ export const LandingPage: FC = () => {
             <NoGames />
           ) : (
             <div className="flex flex-col gap-2">
-              {games.map((game, i) => (
+              {sortedGames.map((game, i) => (
                 <GameCard
                   key={game.id}
                   game={game}
                   delay={i * 40}
+                  isMyTeam={isMyTeamGame(game, teamCode)}
                   onClick={
                     (game.status === 'completed' || game.status === 'live')
                       ? () => setDetailGame(game)
