@@ -280,6 +280,7 @@ interface UmpireViewProps {
   phase: 'intro' | 'flying' | 'landed';
   progress: number;
   showZone?: boolean;
+  cameraOffset?: { x: number; y: number };
   className?: string;
 }
 
@@ -289,6 +290,7 @@ export const UmpireView: FC<UmpireViewProps> = ({
   phase,
   progress,
   showZone = true,
+  cameraOffset = { x: 0, y: 0 },
   className,
 }) => {
   const uid = useId().replace(/:/g, '');
@@ -367,9 +369,23 @@ export const UmpireView: FC<UmpireViewProps> = ({
     return plateToScreen(loc.x, loc.z, topSz, bottomSz);
   }, [phase, pitch, trajPoints, topSz, bottomSz]);
 
+  // 패럴랙스 레이어 오프셋 — 레이어 간 비율 밸런스
+  // far~near 격차가 자연스러운 깊이감을 만들되 배경도 충분히 움직여야 함
+  const farX = cameraOffset.x * 0.5;
+  const farY = cameraOffset.y * 0.4;
+  const midX = cameraOffset.x * 0.75;
+  const midY = cameraOffset.y * 0.65;
+  const nearX = cameraOffset.x;
+  const nearY = cameraOffset.y;
+
   return (
-    <div className={cn('flex flex-col items-center', className)}>
-      <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full" role="img" aria-label="심판 시점">
+    <div className={cn('flex flex-col items-center overflow-hidden', className)}>
+      <svg
+        viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+        className="w-full"
+        role="img"
+        aria-label="심판 시점"
+      >
         <defs>
           <linearGradient id={`${uid}-sky`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={SKY_TOP} />
@@ -417,22 +433,23 @@ export const UmpireView: FC<UmpireViewProps> = ({
           )}
         </defs>
 
-        {/* Sky */}
-        <rect x={0} y={0} width={SVG_W} height={HORIZON_Y + 8} fill={`url(#${uid}-sky)`} />
+        {/* ── Far layer: sky + stadium (패럴랙스 최소) ── */}
+        <g style={{ transform: `translate(${farX}px, ${farY}px)`, transition: 'transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.05)' }}>
+          <rect x={-20} y={-20} width={SVG_W + 40} height={HORIZON_Y + 28} fill={`url(#${uid}-sky)`} />
+          <StadiumBackdrop uid={uid} />
+        </g>
 
-        {/* Stadium backdrop */}
-        <StadiumBackdrop uid={uid} />
+        {/* ── Mid layer: grass + field (패럴랙스 중간) ── */}
+        <g style={{ transform: `translate(${midX}px, ${midY}px)`, transition: 'transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.05)' }}>
+          <rect x={-20} y={HORIZON_Y - 2} width={SVG_W + 40} height={SVG_H - HORIZON_Y + 22}
+            fill={`url(#${uid}-grass)`} />
+          <rect x={-20} y={HORIZON_Y - 2} width={SVG_W + 40} height={18}
+            fill={`url(#${uid}-haze)`} />
+          <Field3D project={project} uid={uid} />
+        </g>
 
-        {/* Grass */}
-        <rect x={0} y={HORIZON_Y} width={SVG_W} height={SVG_H - HORIZON_Y}
-          fill={`url(#${uid}-grass)`} />
-
-        {/* Horizon haze */}
-        <rect x={0} y={HORIZON_Y} width={SVG_W} height={18}
-          fill={`url(#${uid}-haze)`} />
-
-        {/* 3D Field */}
-        <Field3D project={project} uid={uid} />
+        {/* ── Near layer: zone + ball + all pitch elements (패럴랙스 최대) ── */}
+        <g style={{ transform: `translate(${nearX}px, ${nearY}px)`, transition: 'transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.05)' }}>
 
         {/* Strike Zone */}
         {showZone && (
@@ -539,6 +556,8 @@ export const UmpireView: FC<UmpireViewProps> = ({
             <animate attributeName="opacity" from="0.25" to="0" dur="0.35s" fill="freeze" />
           </rect>
         )}
+
+        </g>{/* /near layer */}
       </svg>
     </div>
   );

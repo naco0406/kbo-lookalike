@@ -29,6 +29,8 @@ interface QueueItem {
   balls: number;
   strikes: number;
   outs: number;
+  difficulty: number;   // 1~5 — 존 경계 거리 기반
+  isCloseCAll: boolean; // 존 경계 ±0.5인치 이내
 }
 
 interface Judgment {
@@ -37,6 +39,9 @@ interface Judgment {
   guess: 'ball' | 'strike' | 'timeout';
   speed: number;
   type: string;
+  reactionMs: number;   // 판정까지 걸린 시간 (ms)
+  difficulty: number;   // 해당 투구의 난이도
+  isCloseCall: boolean;
 }
 
 // ── Timing ───────────────────────────────────────────────────────────────────
@@ -79,6 +84,35 @@ const pitchAnswer = (pitch: ParsedPitch): 'ball' | 'strike' => {
   // S (swinging strike), F (foul), H (hit) → determine by location
   return isInStrikeZone(pitch.location, pitch.topSz, pitch.bottomSz) ? 'strike' : 'ball';
 };
+
+// ── Pitch difficulty (zone edge distance → 1~5 stars) ───────────────────────
+
+/** 투구 위치가 존 경계에서 얼마나 가까운지 계산 (feet). 0이면 경계 위 */
+const zoneEdgeDistance = (pitch: ParsedPitch): number => {
+  if (!pitch.location) return 1.0; // 위치 없으면 중간 난이도
+  const { x, z } = pitch.location;
+  const dxOuter = Math.abs(x) - PLATE_HALF_W;     // 양수=존 밖, 음수=존 안
+  const dzTop = z - pitch.topSz;                   // 양수=위로 벗어남
+  const dzBot = pitch.bottomSz - z;                // 양수=아래로 벗어남
+  // 각 축에서 경계까지의 최소 거리 (절대값)
+  const dx = Math.abs(dxOuter);
+  const dz = Math.min(Math.abs(dzTop), Math.abs(dzBot));
+  return Math.min(dx, dz);
+};
+
+/** 존 경계 거리 → 별 1~5 (가까울수록 높음) */
+const calcDifficulty = (pitch: ParsedPitch): number => {
+  const dist = zoneEdgeDistance(pitch);
+  const inches = dist * 12; // feet → inches
+  if (inches <= 0.5) return 5;   // 경계 위
+  if (inches <= 1.5) return 4;   // 아슬아슬
+  if (inches <= 3.0) return 3;   // 애매
+  if (inches <= 5.0) return 2;   // 어느 정도 명확
+  return 1;                       // 누가 봐도 명확
+};
+
+const isCloseCall = (pitch: ParsedPitch): boolean =>
+  zoneEdgeDistance(pitch) * 12 <= 1.5; // 1.5인치 이내
 
 // ── Inning key helpers (top/bottom split) ───────────────────────────────────
 
@@ -206,22 +240,29 @@ const JudgeButtons: FC<{
   </div>
 );
 
-const RevealBanner: FC<{ correct: boolean; answer: string }> = ({ correct, answer }) => (
+const RevealBanner: FC<{ correct: boolean; answer: string; isCloseCall?: boolean }> = ({ correct, answer, isCloseCall: close }) => (
   <div
     className={cn(
-      'flex items-center justify-center gap-3 rounded-2xl px-5 py-4 font-bold backdrop-blur-sm',
+      'flex flex-col items-center justify-center gap-1 rounded-2xl px-5 py-4 font-bold backdrop-blur-sm',
       correct
         ? 'bg-green-500/15 text-green-500 dark:text-green-400'
         : 'bg-red-500/15 text-red-500 dark:text-red-400',
     )}
     style={{ animation: 'umpire-scale-in 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}
   >
-    <span className="text-[22px] font-black tracking-tight">
-      {correct ? 'CORRECT!' : 'WRONG'}
-    </span>
-    <span className="text-[12px] font-semibold opacity-50">
-      {answer === 'ball' ? 'BALL' : 'STRIKE'}
-    </span>
+    <div className="flex items-center gap-3">
+      <span className="text-[22px] font-black tracking-tight">
+        {correct ? 'CORRECT!' : 'WRONG'}
+      </span>
+      <span className="text-[12px] font-semibold opacity-50">
+        {answer === 'ball' ? 'BALL' : 'STRIKE'}
+      </span>
+    </div>
+    {close && (
+      <span className="text-[10px] font-bold tracking-widest text-amber-400">
+        CLOSE CALL
+      </span>
+    )}
   </div>
 );
 
@@ -333,52 +374,17 @@ const ScoreboardBar: FC<{
 
 // ── Sub-components: Result Phase ─────────────────────────────────────────────
 
-const GradeRing: FC<{ pct: number; color: string }> = ({ pct, color }) => {
-  const r = 54;
-  const circ = 2 * Math.PI * r;
-  const offset = circ * (1 - pct / 100);
-  return (
-    <svg width={128} height={128} viewBox="0 0 128 128" className="drop-shadow-lg">
-      {/* Track */}
-      <circle cx={64} cy={64} r={r} fill="none"
-        stroke="currentColor" className="text-muted/15" strokeWidth={8} />
-      {/* Progress arc */}
-      <circle cx={64} cy={64} r={r} fill="none"
-        stroke={color} strokeWidth={8} strokeLinecap="round"
-        strokeDasharray={circ} strokeDashoffset={offset}
-        transform="rotate(-90 64 64)"
-        style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)' }} />
-      {/* Inner glow */}
-      <circle cx={64} cy={64} r={42} fill={color} opacity={0.04} />
-    </svg>
-  );
-};
+// ── Difficulty stars ──
 
-const StatBar: FC<{ label: string; correct: number; total: number; color: string; bg: string }> = ({
-  label, correct, total, color, bg,
-}) => {
-  const pct = total > 0 ? (correct / total) * 100 : 0;
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-semibold" style={{ color }}>{label}</span>
-        <span className="text-[11px] font-bold tabular-nums" style={{ color }}>
-          {correct}/{total}
-        </span>
-      </div>
-      <div className="relative h-2 w-full overflow-hidden rounded-full" style={{ backgroundColor: bg }}>
-        <div
-          className="h-full rounded-full"
-          style={{
-            width: `${pct}%`,
-            backgroundColor: color,
-            transition: 'width 0.8s cubic-bezier(0.4,0,0.2,1) 0.3s',
-          }}
-        />
-      </div>
-    </div>
-  );
-};
+const DifficultyStars: FC<{ level: number }> = ({ level }) => (
+  <span className="inline-flex gap-px text-[10px]" title={`난이도 ${level}/5`}>
+    {Array.from({ length: 5 }, (_, i) => (
+      <span key={i} className={i < level ? 'text-amber-400' : 'text-muted-foreground/15'}>★</span>
+    ))}
+  </span>
+);
+
+// ── Result Screen — 공유 카드형 ──
 
 const ResultScreen: FC<{
   judgments: Judgment[];
@@ -399,6 +405,22 @@ const ResultScreen: FC<{
   const ballCorrect = balls.filter(j => j.correct).length;
   const strikeCorrect = strikes.filter(j => j.correct).length;
   const timeouts = judgments.filter(j => j.guess === 'timeout').length;
+  const closeCalls = judgments.filter(j => j.isCloseCall);
+  const closeCorrect = closeCalls.filter(j => j.correct).length;
+
+  // 평균 반응 속도 (타임아웃 제외)
+  const validReactions = judgments.filter(j => j.guess !== 'timeout');
+  const avgReactionMs = validReactions.length > 0
+    ? Math.round(validReactions.reduce((s, j) => s + j.reactionMs, 0) / validReactions.length)
+    : 0;
+  const fastestMs = validReactions.length > 0
+    ? Math.min(...validReactions.map(j => j.reactionMs))
+    : 0;
+
+  // 평균 난이도
+  const avgDifficulty = total > 0
+    ? (judgments.reduce((s, j) => s + j.difficulty, 0) / total)
+    : 0;
 
   let maxStreak = 0, cur = 0;
   for (const j of judgments) { if (j.correct) { cur++; maxStreak = Math.max(maxStreak, cur); } else cur = 0; }
@@ -417,111 +439,150 @@ const ResultScreen: FC<{
     transition: `opacity 0.5s cubic-bezier(0.4,0,0.2,1) ${delay}s, transform 0.5s cubic-bezier(0.4,0,0.2,1) ${delay}s`,
   });
 
+  const ballPct = balls.length > 0 ? Math.round((ballCorrect / balls.length) * 100) : 0;
+  const strikePct = strikes.length > 0 ? Math.round((strikeCorrect / strikes.length) * 100) : 0;
+
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-8 pt-4">
-      {/* Grade card */}
+
+      {/* ── Share Card — 캡처/공유 대상 영역 ── */}
       <div
-        className="relative flex flex-col items-center rounded-3xl border border-border/40 bg-gradient-to-b from-card to-background px-6 pb-6 pt-8 shadow-sm"
+        className="relative overflow-hidden rounded-3xl border border-border/40 bg-card"
         style={stagger(0.05)}
       >
-        {/* Ring + Score */}
-        <div className="relative flex items-center justify-center">
-          <GradeRing pct={mounted ? pct : 0} color={gradeColor} />
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-[36px] font-black tabular-nums leading-none tracking-tight"
-              style={{ color: gradeColor }}>
+        {/* 상단: 등급 + 점수 (그라데이션 배경) */}
+        <div
+          className="relative flex flex-col items-center px-6 pt-8 pb-6"
+          style={{ background: `linear-gradient(180deg, ${gradeColor}15 0%, transparent 100%)` }}
+        >
+          {/* 등급 배지 */}
+          <div
+            className="mb-3 rounded-full px-4 py-1 text-[11px] font-black tracking-[0.2em]"
+            style={{ backgroundColor: `${gradeColor}20`, color: gradeColor }}
+          >
+            {grade.label}
+          </div>
+
+          {/* 점수 */}
+          <div className="flex items-baseline gap-1">
+            <span
+              className="font-score text-[64px] leading-none"
+              style={{ color: gradeColor }}
+            >
               {pct}
             </span>
-            <span className="mt-0.5 text-[10px] font-medium text-muted-foreground/40">/ 100</span>
+            <span className="text-[18px] font-bold text-muted-foreground/30">점</span>
+          </div>
+          <p className="mt-1 text-[13px] font-medium text-muted-foreground/60">{grade.sub}</p>
+
+          {/* 핵심 3스탯 */}
+          <div className="mt-5 flex w-full items-center justify-center gap-5">
+            <div className="flex flex-col items-center">
+              <span className="text-[22px] font-black tabular-nums leading-none">{correct}<span className="text-[13px] text-muted-foreground/30">/{total}</span></span>
+              <span className="mt-1 text-[10px] font-medium text-muted-foreground/40">정답</span>
+            </div>
+            <div className="h-8 w-px bg-border/30" />
+            <div className="flex flex-col items-center">
+              <span className="text-[22px] font-black tabular-nums leading-none">{maxStreak}</span>
+              <span className="mt-1 text-[10px] font-medium text-muted-foreground/40">최대 연속</span>
+            </div>
+            <div className="h-8 w-px bg-border/30" />
+            <div className="flex flex-col items-center">
+              <span className="text-[22px] font-black tabular-nums leading-none">{avgReactionMs > 0 ? `${(avgReactionMs / 1000).toFixed(1)}` : '-'}<span className="text-[11px] text-muted-foreground/30">s</span></span>
+              <span className="mt-1 text-[10px] font-medium text-muted-foreground/40">평균 반응</span>
+            </div>
           </div>
         </div>
 
-        {/* Grade label */}
-        <div className="mt-4 text-center" style={stagger(0.25)}>
-          <p className="text-[18px] font-black tracking-widest" style={{ color: gradeColor }}>
-            {grade.label}
-          </p>
-          <p className="mt-0.5 text-[12px] font-medium text-muted-foreground/50">{grade.sub}</p>
+        {/* 중단: 상세 스탯 그리드 */}
+        <div className="grid grid-cols-2 gap-px bg-border/20">
+          {/* Ball 정확도 */}
+          <div className="flex flex-col items-center bg-card px-4 py-4" style={stagger(0.3)}>
+            <span className="text-[11px] font-bold text-blue-500">BALL</span>
+            <span className="mt-1 text-[20px] font-black tabular-nums text-blue-500">{ballPct}%</span>
+            <span className="text-[10px] text-muted-foreground/40">{ballCorrect}/{balls.length}</span>
+          </div>
+          {/* Strike 정확도 */}
+          <div className="flex flex-col items-center bg-card px-4 py-4" style={stagger(0.35)}>
+            <span className="text-[11px] font-bold text-red-500">STRIKE</span>
+            <span className="mt-1 text-[20px] font-black tabular-nums text-red-500">{strikePct}%</span>
+            <span className="text-[10px] text-muted-foreground/40">{strikeCorrect}/{strikes.length}</span>
+          </div>
+          {/* 난이도 */}
+          <div className="flex flex-col items-center bg-card px-4 py-4" style={stagger(0.4)}>
+            <span className="text-[11px] font-bold text-amber-500">난이도</span>
+            <div className="mt-1"><DifficultyStars level={Math.round(avgDifficulty)} /></div>
+            <span className="text-[10px] text-muted-foreground/40">{avgDifficulty.toFixed(1)} / 5</span>
+          </div>
+          {/* 클로즈 콜 */}
+          <div className="flex flex-col items-center bg-card px-4 py-4" style={stagger(0.45)}>
+            <span className="text-[11px] font-bold text-purple-500">CLOSE CALL</span>
+            <span className="mt-1 text-[20px] font-black tabular-nums text-purple-500">
+              {closeCalls.length > 0 ? `${closeCorrect}/${closeCalls.length}` : '-'}
+            </span>
+            <span className="text-[10px] text-muted-foreground/40">경계 투구</span>
+          </div>
         </div>
 
-        {/* Quick stats row */}
-        <div className="mt-5 flex w-full items-center justify-center gap-6" style={stagger(0.4)}>
-          <div className="flex flex-col items-center">
-            <span className="text-[20px] font-black tabular-nums leading-none">{correct}</span>
-            <span className="mt-1 text-[9px] font-medium text-muted-foreground/40">정답</span>
+        {/* 하단: 투구별 스트립 */}
+        <div className="px-5 py-4" style={stagger(0.55)}>
+          <div className="flex flex-wrap items-center justify-center gap-[3px]">
+            {judgments.map((j, i) => (
+              <div
+                key={i}
+                className={cn(
+                  'flex h-[22px] w-[22px] items-center justify-center rounded text-[7px] font-bold',
+                  j.correct
+                    ? 'bg-green-500/15 text-green-500'
+                    : j.guess === 'timeout'
+                      ? 'bg-amber-500/15 text-amber-500'
+                      : 'bg-red-500/15 text-red-500',
+                )}
+              >
+                {j.correct ? 'O' : j.guess === 'timeout' ? 'T' : 'X'}
+              </div>
+            ))}
           </div>
-          <div className="h-6 w-px bg-border/40" />
-          <div className="flex flex-col items-center">
-            <span className="text-[20px] font-black tabular-nums leading-none">{total - correct}</span>
-            <span className="mt-1 text-[9px] font-medium text-muted-foreground/40">오답</span>
-          </div>
-          <div className="h-6 w-px bg-border/40" />
-          <div className="flex flex-col items-center">
-            <span className="text-[20px] font-black tabular-nums leading-none">{maxStreak}</span>
-            <span className="mt-1 text-[9px] font-medium text-muted-foreground/40">최대 연속</span>
-          </div>
+        </div>
+
+        {/* 워터마크 */}
+        <div className="flex items-center justify-center pb-3">
+          <span className="font-score text-[14px] tracking-widest text-muted-foreground/20">643</span>
         </div>
       </div>
 
-      {/* Ad — 등급 표시 직후, 상세 통계 위 */}
+      {/* 추가 정보 (카드 외부) */}
+      {(timeouts > 0 || fastestMs > 0) && (
+        <div className="mt-3 flex gap-2" style={stagger(0.65)}>
+          {timeouts > 0 && (
+            <div className="flex flex-1 items-center justify-between rounded-xl border border-border/30 bg-card/50 px-3.5 py-2.5">
+              <span className="text-[10px] font-medium text-muted-foreground/50">타임아웃</span>
+              <span className="text-[12px] font-bold tabular-nums text-amber-500">{timeouts}</span>
+            </div>
+          )}
+          {fastestMs > 0 && (
+            <div className="flex flex-1 items-center justify-between rounded-xl border border-border/30 bg-card/50 px-3.5 py-2.5">
+              <span className="text-[10px] font-medium text-muted-foreground/50">최빠른 판정</span>
+              <span className="text-[12px] font-bold tabular-nums">{(fastestMs / 1000).toFixed(2)}s</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Ad */}
       <AdContainer
         type={AD_SLOTS.umpireResult.type}
         unitId={AD_SLOTS.umpireResult.unitId}
       />
 
-      {/* Detailed breakdown */}
-      <div
-        className="mt-4 flex flex-col gap-3 rounded-2xl border border-border/30 bg-card/50 px-5 py-4"
-        style={stagger(0.55)}
-      >
-        <StatBar label="BALL" correct={mounted ? ballCorrect : 0} total={balls.length}
-          color="#3b82f6" bg="rgba(59,130,246,0.08)" />
-        <StatBar label="STRIKE" correct={mounted ? strikeCorrect : 0} total={strikes.length}
-          color="#ef4444" bg="rgba(239,68,68,0.08)" />
-      </div>
-
-      {/* Extra stats chips */}
-      <div className="mt-3 flex gap-2" style={stagger(0.65)}>
-        {timeouts > 0 && (
-          <div className="flex flex-1 items-center justify-between rounded-xl border border-border/30 bg-card/50 px-3.5 py-2.5">
-            <span className="text-[10px] font-medium text-muted-foreground/50">타임아웃</span>
-            <span className="text-[12px] font-bold tabular-nums text-amber-500">{timeouts}</span>
-          </div>
-        )}
-        <div className="flex flex-1 items-center justify-between rounded-xl border border-border/30 bg-card/50 px-3.5 py-2.5">
-          <span className="text-[10px] font-medium text-muted-foreground/50">판정 투구</span>
-          <span className="text-[12px] font-bold tabular-nums">{total}</span>
-        </div>
-      </div>
-
-      {/* Pitch-by-pitch strip */}
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-1" style={stagger(0.75)}>
-        {judgments.map((j, i) => (
-          <div
-            key={i}
-            className={cn(
-              'flex h-6 w-6 items-center justify-center rounded-md text-[8px] font-bold',
-              j.correct
-                ? 'bg-green-500/12 text-green-500'
-                : j.guess === 'timeout'
-                  ? 'bg-amber-500/12 text-amber-500'
-                  : 'bg-red-500/12 text-red-500',
-            )}
-            title={`${i + 1}구: ${j.type} ${j.speed}km/h — ${j.answer === 'ball' ? 'B' : 'S'}`}
-          >
-            {j.correct ? 'O' : j.guess === 'timeout' ? 'T' : 'X'}
-          </div>
-        ))}
-      </div>
-
       {/* Spacer */}
       <div className="flex-1" />
 
       {/* Actions */}
-      <div className="mt-6 flex flex-col gap-2.5" style={stagger(0.85)}>
+      <div className="mt-6 flex flex-col gap-2.5" style={stagger(0.75)}>
         <button
           onClick={onRetry}
-          className="flex h-[52px] items-center justify-center gap-2 rounded-2xl bg-primary text-[14px] font-bold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.97]"
+          className="flex h-[52px] items-center justify-center gap-2 rounded-2xl bg-accent text-[14px] font-bold text-accent-foreground shadow-sm transition-all hover:bg-accent/90 active:scale-[0.97]"
         >
           <RotateCcw className="h-4 w-4" />
           다시 도전
@@ -699,13 +760,15 @@ export const UmpireGamePage: FC = () => {
   const [animProgress, setAnimProgress] = useState(0);
   const [timer, setTimer] = useState(JUDGE_TIME);
   const [judgments, setJudgments] = useState<Judgment[]>([]);
-  const [lastResult, setLastResult] = useState<{ correct: boolean; answer: string } | null>(null);
+  const [lastResult, setLastResult] = useState<{ correct: boolean; answer: string; isCloseCall?: boolean } | null>(null);
   const [shaking, setShaking] = useState(false);
+  const [cameraOffset, setCameraOffset] = useState({ x: 0, y: 0 });
 
   const animRef = useRef(0);
   const startRef = useRef(0);
   const timerRef = useRef(0);
   const revealRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const judgeStartRef = useRef(0); // 판정 시작 시점 (performance.now)
 
   const currentItem = pitchQueue[currentIdx];
 
@@ -760,6 +823,11 @@ export const UmpireGamePage: FC = () => {
   // ── Animation: intro → flying (judgable) ──
   useEffect(() => {
     if (playState !== 'intro') return;
+    // 매 투구마다 카메라 흔들림 (심판 시야 변화 — 패럴랙스 기반)
+    setCameraOffset({
+      x: (Math.random() - 0.5) * 28,  // ±14px (near layer 기준)
+      y: (Math.random() - 0.5) * 16,  // ±8px
+    });
     const t = setTimeout(() => setPlayState('flying'), INTRO_MS);
     return () => clearTimeout(t);
   }, [playState, currentIdx]);
@@ -791,6 +859,7 @@ export const UmpireGamePage: FC = () => {
   // ── Timer countdown during judging ──
   useEffect(() => {
     if (playState !== 'judging') return;
+    judgeStartRef.current = performance.now();
 
     const start = performance.now();
     const tick = (now: number) => {
@@ -830,6 +899,9 @@ export const UmpireGamePage: FC = () => {
     cancelAnimationFrame(timerRef.current);
 
     const correct = guess !== 'timeout' && guess === currentItem.answer;
+    const reactionMs = guess === 'timeout'
+      ? JUDGE_TIME * 1000
+      : Math.round(performance.now() - judgeStartRef.current);
 
     setJudgments(prev => [
       ...prev,
@@ -839,10 +911,13 @@ export const UmpireGamePage: FC = () => {
         guess,
         speed: currentItem.pitch.speed,
         type: currentItem.pitch.type,
+        reactionMs,
+        difficulty: currentItem.difficulty,
+        isCloseCall: currentItem.isCloseCAll,
       },
     ]);
 
-    setLastResult({ correct, answer: currentItem.answer });
+    setLastResult({ correct, answer: currentItem.answer, isCloseCall: currentItem.isCloseCAll });
     setPlayState('revealing');
 
     // Haptic feedback
@@ -884,6 +959,8 @@ export const UmpireGamePage: FC = () => {
             balls,
             strikes,
             outs,
+            difficulty: calcDifficulty(p),
+            isCloseCAll: isCloseCall(p),
           });
         }
         // Update BSO for every pitch (including non-trajectory)
@@ -1192,7 +1269,16 @@ export const UmpireGamePage: FC = () => {
 
           {/* UmpireView */}
           <div
-            className="relative shrink-0 overflow-hidden rounded-2xl border border-border/30 bg-muted/10"
+            className={cn(
+              'relative shrink-0 overflow-hidden rounded-2xl border bg-muted/10 transition-[border-color] duration-500',
+              streak >= 10
+                ? 'border-red-500/50'
+                : streak >= 5
+                  ? 'border-amber-500/40'
+                  : streak >= 3
+                    ? 'border-green-500/30'
+                    : 'border-border/30',
+            )}
             style={shaking ? { animation: 'umpire-shake 0.5s ease-out' } : undefined}
           >
             <UmpireView
@@ -1201,6 +1287,7 @@ export const UmpireGamePage: FC = () => {
               phase={umpirePhase}
               progress={animProgress}
               showZone={playState === 'revealing'}
+              cameraOffset={cameraOffset}
             />
             {/* Result flash overlay */}
             {playState === 'revealing' && lastResult && (
@@ -1237,7 +1324,7 @@ export const UmpireGamePage: FC = () => {
           {/* Reveal banner */}
           {playState === 'revealing' && lastResult && (
             <div className="shrink-0 mb-2">
-              <RevealBanner correct={lastResult.correct} answer={lastResult.answer} />
+              <RevealBanner correct={lastResult.correct} answer={lastResult.answer} isCloseCall={lastResult.isCloseCall} />
             </div>
           )}
 
