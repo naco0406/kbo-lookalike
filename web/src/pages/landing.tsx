@@ -44,7 +44,6 @@ const GameCard: FC<{ game: ScheduleGame; delay: number; isMyTeam?: boolean; onCl
       className={cn(
         'animate-reveal-up group relative w-full overflow-hidden rounded-2xl px-5 py-3.5 text-left',
         'bg-card transition-all duration-200',
-        isLive && 'ring-1 ring-destructive/25',
         isMyTeam && !isLive && 'ring-1 ring-accent/40',
         isClickable && 'cursor-pointer active:scale-[0.98]',
       )}
@@ -144,66 +143,59 @@ const NoGames: FC = () => (
 
 // ── Hero cards (Toss-style: vertical, bold, spacious) ───────────────────────
 
-interface HeroItem {
+// ── Hero: Primary (full-width) ───────────────────────────────────────────────
+
+const PrimaryHero: FC = () => (
+  <Link
+    to="/lookalike"
+    viewTransition
+    className="animate-reveal-up group relative block overflow-hidden rounded-3xl bg-accent transition-all duration-200 active:scale-[0.98]"
+  >
+    <div className="px-6 pt-6 pb-5">
+      <span className="text-[36px] leading-none">⚾</span>
+      <p className="mt-3 text-[22px] font-extrabold leading-tight tracking-tight text-accent-foreground">
+        혹시 선수세요?
+      </p>
+      <p className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-accent-foreground/70">
+        {'사진 한 장이면\n닮은 선수 Top 5를 찾아드려요'}
+      </p>
+      <div className="mt-5 inline-flex items-center rounded-full bg-accent-foreground/20 px-5 py-2.5 text-[14px] font-bold text-accent-foreground transition-colors group-hover:bg-accent-foreground/30">
+        닮은꼴 찾기
+      </div>
+    </div>
+  </Link>
+);
+
+// ── Hero: Secondary (half-width, compact) ────────────────────────────────────
+
+interface SecondaryHero {
   id: string;
   emoji: string;
   title: string;
   sub: string;
-  cta: string;
   href: string;
 }
 
-const HEROES: HeroItem[] = [
-  {
-    id: 'lookalike',
-    emoji: '⚾',
-    title: '혹시 선수세요?',
-    sub: '사진 한 장이면\n닮은 선수 Top 5를 찾아드려요',
-    cta: '닮은꼴 찾기',
-    href: '/lookalike',
-  },
-  {
-    id: 'umpire',
-    emoji: '🧤',
-    title: '공을 네모 안에 넣어',
-    sub: '볼인지 스트라이크인지\n당신이 판정해보세요',
-    cta: '판정하러 가기',
-    href: '/umpire-game',
-  },
+const SECONDARY_HEROES: SecondaryHero[] = [
+  { id: 'umpire', emoji: '🧤', title: '심판 게임', sub: '볼인지 스트라이크인지\n당신이 판정해보세요', href: '/umpire-game' },
+  { id: 'mbti', emoji: '🧬', title: '야구 MBTI', sub: '나는 어떤\n야구팬일까?', href: '/mbti' },
 ];
 
-const HeroCard: FC<{ hero: HeroItem; delay: number; primary?: boolean }> = ({ hero, delay, primary }) => (
+const SecondaryCard: FC<{ item: SecondaryHero; delay: number }> = ({ item, delay }) => (
   <Link
-    to={hero.href}
+    to={item.href}
     viewTransition
-    className={cn(
-      'animate-reveal-up group relative block overflow-hidden rounded-3xl transition-all duration-200 active:scale-[0.98]',
-      primary ? 'bg-accent' : 'bg-card',
-    )}
+    className="animate-reveal-up group block overflow-hidden rounded-2xl bg-card transition-all duration-200 active:scale-[0.97]"
     style={{ animationDelay: `${delay}ms` }}
   >
-    <div className="px-6 pt-6 pb-5">
-      <span className="text-[36px] leading-none">{hero.emoji}</span>
-      <p className={cn(
-        'mt-3 text-[22px] font-extrabold leading-tight tracking-tight',
-        primary ? 'text-accent-foreground' : 'text-foreground',
-      )}>
-        {hero.title}
+    <div className="px-4 pt-4 pb-4">
+      <span className="text-[24px] leading-none">{item.emoji}</span>
+      <p className="mt-2 text-[15px] font-extrabold leading-tight tracking-tight">
+        {item.title}
       </p>
-      <p className={cn(
-        'mt-2 whitespace-pre-line text-[14px] leading-relaxed',
-        primary ? 'text-accent-foreground/70' : 'text-muted-foreground',
-      )}>
-        {hero.sub}
+      <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-muted-foreground">
+        {item.sub}
       </p>
-      <div className={cn(
-        'mt-5 inline-flex items-center rounded-full px-5 py-2.5 text-[14px] font-bold transition-colors',
-        primary
-          ? 'bg-accent-foreground/20 text-accent-foreground group-hover:bg-accent-foreground/30'
-          : 'bg-accent text-accent-foreground group-hover:bg-accent/90',
-      )}>
-        {hero.cta}
-      </div>
     </div>
   </Link>
 );
@@ -228,15 +220,6 @@ const MORE_FEATURES: MoreItem[] = [
     sub: 'KBO 전체 일정·스코어',
     href: '/schedule',
     available: true,
-  },
-  {
-    id: 'mbti',
-    icon: '🧬',
-    title: '야구 MBTI',
-    sub: '나는 어떤 야구 유형?',
-    href: null,
-    available: false,
-    badge: '준비 중',
   },
   {
     id: 'fortune',
@@ -407,11 +390,14 @@ export const LandingPage: FC = () => {
           ) : null}
         </div>
 
-        {/* ── Hero: 메인 콘텐츠 ── */}
+        {/* ── Hero: 1 + 2 레이아웃 ── */}
         <section className="mb-10 flex flex-col gap-3">
-          {HEROES.map((hero, i) => (
-            <HeroCard key={hero.id} hero={hero} delay={i * 80} primary={i === 0} />
-          ))}
+          <PrimaryHero />
+          <div className="grid grid-cols-2 gap-3">
+            {SECONDARY_HEROES.map((item, i) => (
+              <SecondaryCard key={item.id} item={item} delay={(i + 1) * 80} />
+            ))}
+          </div>
         </section>
 
         {/* ── Today's Games ── */}
