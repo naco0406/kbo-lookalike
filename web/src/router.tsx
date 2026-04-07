@@ -7,6 +7,8 @@ import { ResultPage } from '@/pages/result';
 import { SchedulePage } from '@/pages/schedule';
 import { UmpireGamePage } from '@/pages/umpire-game';
 import { ProfilePage } from '@/pages/profile';
+import { MbtiPage } from '@/pages/mbti';
+import { MbtiResultPage } from '@/pages/mbti-result';
 
 export const router = createBrowserRouter([
   {
@@ -16,6 +18,8 @@ export const router = createBrowserRouter([
       { path: '/schedule', element: <SchedulePage /> },
       { path: '/umpire-game', element: <UmpireGamePage /> },
       { path: '/profile', element: <ProfilePage /> },
+      { path: '/mbti', element: <MbtiPage /> },
+      { path: '/mbti/result', element: <MbtiResultPage /> },
     ],
   },
   {

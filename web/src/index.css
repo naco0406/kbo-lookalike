@@ -412,6 +412,17 @@
   animation: stage-exit 0.45s ease-in both;
 }
 
+/* ── MBTI Analyzing Dots ── */
+
+@keyframes mbti-dot {
+  0%, 80%, 100% { opacity: 0.25; transform: scale(0.75); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+.animate-mbti-dot {
+  animation: mbti-dot 1.2s ease-in-out infinite;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-scan-line,
@@ -423,7 +434,8 @@
   .animate-position-alt-reverse,
   .animate-processing-breathe,
   .animate-scan-ring,
-  .animate-tile-pulse {
+  .animate-tile-pulse,
+  .animate-mbti-dot {
     animation: none !important;
   }
 
