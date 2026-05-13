@@ -10,6 +10,7 @@ import { ProfilePage } from '@/pages/profile';
 import { MbtiPage } from '@/pages/mbti';
 import { MbtiResultPage } from '@/pages/mbti-result';
 import { DesignSystemPage } from '@/pages/design-system';
+import { StandingsPage } from '@/pages/standings';
 
 export const router = createBrowserRouter([
   {
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
       { path: '/mbti', element: <MbtiPage /> },
       { path: '/mbti/result', element: <MbtiResultPage /> },
       { path: '/design-system', element: <DesignSystemPage /> },
+      { path: '/standings', element: <StandingsPage /> },
     ],
   },
   {

@@ -9,9 +9,11 @@ import type { ScheduleGame } from '@/hooks/use-schedule';
 import { GameDetailModal } from '@/components/schedule/game-detail-modal';
 import { useProfile } from '@/hooks/use-profile';
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh';
+import { useStandings } from '@/hooks/use-standings';
 import { PullToRefreshIndicator } from '@/components/pull-to-refresh';
 import { AdContainer } from '@/components/ad/ad-container';
 import { AD_SLOTS } from '@/components/ad/ad-slots';
+import { LeagueSnapshot } from '@/components/standings/standings-widgets';
 
 // ── Game components ──────────────────────────────────────────────────────────
 
@@ -236,6 +238,14 @@ const MORE_FEATURES: MoreItem[] = [
     available: true,
   },
   {
+    id: 'standings',
+    icon: '🏆',
+    title: '지금 몇 등이야?',
+    sub: 'KBO 순위·최근 흐름',
+    href: '/standings',
+    available: true,
+  },
+  {
     id: 'fortune',
     icon: '🔮',
     title: '감독님 선발은요?',
@@ -338,6 +348,7 @@ const isMyTeamGame = (game: ScheduleGame, teamCode: string | null): boolean =>
 
 export const LandingPage: FC = () => {
   const { games, loading, refresh } = useSchedule();
+  const { standings, loading: standingsLoading } = useStandings();
   const { profile } = useProfile();
   const [detailGame, setDetailGame] = useState<ScheduleGame | null>(null);
   const teamCode = profile.favoriteTeam;
@@ -474,6 +485,12 @@ export const LandingPage: FC = () => {
             </div>
           )}
         </section>
+
+        <LeagueSnapshot
+          standings={standings}
+          favoriteTeamCode={teamCode}
+          loading={standingsLoading}
+        />
 
         {/* ── Ad ── */}
         <AdContainer type={AD_SLOTS.home.type} unitId={AD_SLOTS.home.unitId} />
