@@ -9,6 +9,7 @@ import { UmpireGamePage } from '@/pages/umpire-game';
 import { ProfilePage } from '@/pages/profile';
 import { MbtiPage } from '@/pages/mbti';
 import { MbtiResultPage } from '@/pages/mbti-result';
+import { DesignSystemPage } from '@/pages/design-system';
 
 export const router = createBrowserRouter([
   {
@@ -20,6 +21,7 @@ export const router = createBrowserRouter([
       { path: '/profile', element: <ProfilePage /> },
       { path: '/mbti', element: <MbtiPage /> },
       { path: '/mbti/result', element: <MbtiResultPage /> },
+      { path: '/design-system', element: <DesignSystemPage /> },
     ],
   },
   {

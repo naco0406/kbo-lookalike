@@ -20,7 +20,10 @@ const TeamLogo: FC<{ code: string; size?: 'sm' | 'md' }> = ({ code, size = 'md' 
   const dim = size === 'sm' ? 'h-8 w-8 text-[10px]' : 'h-11 w-11 text-[11px]';
   return (
     <div
-      className={cn('flex shrink-0 items-center justify-center rounded-full font-extrabold text-white', dim)}
+      className={cn(
+        'flex shrink-0 items-center justify-center rounded-full font-extrabold text-white',
+        dim,
+      )}
       style={{ backgroundColor: team?.primary ?? '#555' }}
     >
       {team?.shortName ?? code}
@@ -28,7 +31,12 @@ const TeamLogo: FC<{ code: string; size?: 'sm' | 'md' }> = ({ code, size = 'md' 
   );
 };
 
-const GameCard: FC<{ game: ScheduleGame; delay: number; isMyTeam?: boolean; onClick?: () => void }> = ({ game, delay, isMyTeam, onClick }) => {
+const GameCard: FC<{
+  game: ScheduleGame;
+  delay: number;
+  isMyTeam?: boolean;
+  onClick?: () => void;
+}> = ({ game, delay, isMyTeam, onClick }) => {
   const isLive = game.status === 'live';
   const isDone = game.status === 'completed';
   const isClickable = isDone || isLive;
@@ -44,21 +52,21 @@ const GameCard: FC<{ game: ScheduleGame; delay: number; isMyTeam?: boolean; onCl
       className={cn(
         'animate-reveal-up group relative w-full overflow-hidden rounded-2xl px-5 py-3.5 text-left',
         'bg-card transition-all duration-200',
-        isMyTeam && !isLive && 'ring-1 ring-accent/40',
+        isMyTeam && !isLive && 'ring-accent/40 ring-1',
         isClickable && 'cursor-pointer active:scale-[0.98]',
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
       {/* Live accent line */}
       {isLive && (
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-destructive/60 to-transparent" />
+        <div className="via-destructive/60 pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent to-transparent" />
       )}
 
       <div className="flex items-center gap-3">
         {/* Away */}
         <div className="flex flex-col items-center gap-1">
           <TeamLogo code={game.awayCode} />
-          <span className="text-[10px] font-medium text-muted-foreground">
+          <span className="text-muted-foreground text-[10px] font-medium">
             {TEAM_COLORS[game.awayCode]?.shortName ?? game.awayCode}
           </span>
         </div>
@@ -67,22 +75,26 @@ const GameCard: FC<{ game: ScheduleGame; delay: number; isMyTeam?: boolean; onCl
         <div className="flex flex-1 flex-col items-center">
           {hasScore ? (
             <div className="flex items-baseline gap-3">
-              <span className={cn(
-                'font-score text-[36px] leading-none',
-                !awayWon && isDone && 'text-muted-foreground',
-              )}>
+              <span
+                className={cn(
+                  'font-score text-[36px] leading-none',
+                  !awayWon && isDone && 'text-muted-foreground',
+                )}
+              >
                 {game.awayScore}
               </span>
-              <span className="text-[14px] font-light text-muted-foreground">-</span>
-              <span className={cn(
-                'font-score text-[36px] leading-none',
-                !homeWon && isDone && 'text-muted-foreground',
-              )}>
+              <span className="text-muted-foreground text-[14px] font-light">-</span>
+              <span
+                className={cn(
+                  'font-score text-[36px] leading-none',
+                  !homeWon && isDone && 'text-muted-foreground',
+                )}
+              >
                 {game.homeScore}
               </span>
             </div>
           ) : (
-            <span className="font-score text-[28px] leading-none tracking-wider text-muted-foreground">
+            <span className="font-score text-muted-foreground text-[28px] leading-none tracking-wider">
               {game.time}
             </span>
           )}
@@ -91,19 +103,17 @@ const GameCard: FC<{ game: ScheduleGame; delay: number; isMyTeam?: boolean; onCl
             {isLive ? (
               <>
                 <span className="relative flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-50" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-destructive" />
+                  <span className="bg-destructive absolute inline-flex h-full w-full animate-ping rounded-full opacity-50" />
+                  <span className="bg-destructive relative inline-flex h-1.5 w-1.5 rounded-full" />
                 </span>
-                <span className="text-[10px] font-semibold text-destructive">
+                <span className="text-destructive text-[10px] font-semibold">
                   {game.inning ?? '진행중'}
                 </span>
-                <span className="text-[10px] text-muted-foreground/40">·</span>
-                <span className="text-[10px] text-muted-foreground">{game.venue}</span>
+                <span className="text-muted-foreground/40 text-[10px]">·</span>
+                <span className="text-muted-foreground text-[10px]">{game.venue}</span>
               </>
             ) : (
-              <span className="text-[10px] text-muted-foreground">
-                {game.venue}
-              </span>
+              <span className="text-muted-foreground text-[10px]">{game.venue}</span>
             )}
           </div>
         </div>
@@ -111,7 +121,7 @@ const GameCard: FC<{ game: ScheduleGame; delay: number; isMyTeam?: boolean; onCl
         {/* Home */}
         <div className="flex flex-col items-center gap-1">
           <TeamLogo code={game.homeCode} />
-          <span className="text-[10px] font-medium text-muted-foreground">
+          <span className="text-muted-foreground text-[10px] font-medium">
             {TEAM_COLORS[game.homeCode]?.shortName ?? game.homeCode}
           </span>
         </div>
@@ -123,18 +133,18 @@ const GameCard: FC<{ game: ScheduleGame; delay: number; isMyTeam?: boolean; onCl
 const GamesSkeleton: FC = () => (
   <div className="flex flex-col gap-2">
     {Array.from({ length: 3 }).map((_, i) => (
-      <div key={i} className="h-[72px] animate-pulse rounded-2xl bg-muted/50" />
+      <div key={i} className="bg-muted/50 h-[72px] animate-pulse rounded-2xl" />
     ))}
   </div>
 );
 
 const NoGames: FC = () => (
-  <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-card py-10 text-center">
+  <div className="bg-card flex flex-col items-center gap-1.5 rounded-2xl py-10 text-center">
     <p className="text-[20px]">⚾️</p>
-    <p className="text-[13px] text-muted-foreground">오늘은 경기가 없는 날이에요</p>
+    <p className="text-muted-foreground text-[13px]">오늘은 경기가 없는 날이에요</p>
     <Link
       to="/schedule"
-      className="mt-2 text-[12px] font-medium text-accent transition-colors hover:text-accent/80"
+      className="text-accent hover:text-accent/80 mt-2 text-[12px] font-medium transition-colors"
     >
       전체 일정 보기 →
     </Link>
@@ -149,17 +159,17 @@ const PrimaryHero: FC = () => (
   <Link
     to="/lookalike"
     viewTransition
-    className="animate-reveal-up group relative block overflow-hidden rounded-3xl bg-accent transition-all duration-200 active:scale-[0.98]"
+    className="animate-reveal-up group bg-accent relative block overflow-hidden rounded-3xl transition-all duration-200 active:scale-[0.98]"
   >
     <div className="px-6 pt-6 pb-5">
       <span className="text-[36px] leading-none">⚾</span>
-      <p className="mt-3 text-[22px] font-extrabold leading-tight tracking-tight text-accent-foreground">
+      <p className="text-accent-foreground mt-3 text-[22px] leading-tight font-extrabold tracking-tight">
         혹시 선수세요?
       </p>
-      <p className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-accent-foreground/70">
+      <p className="text-accent-foreground/70 mt-2 text-[14px] leading-relaxed whitespace-pre-line">
         {'사진 한 장이면\n닮은 선수 Top 5를 찾아드려요'}
       </p>
-      <div className="mt-5 inline-flex items-center rounded-full bg-accent-foreground/20 px-5 py-2.5 text-[14px] font-bold text-accent-foreground transition-colors group-hover:bg-accent-foreground/30">
+      <div className="bg-accent-foreground/20 text-accent-foreground group-hover:bg-accent-foreground/30 mt-5 inline-flex items-center rounded-full px-5 py-2.5 text-[14px] font-bold transition-colors">
         닮은꼴 찾기
       </div>
     </div>
@@ -177,7 +187,13 @@ interface SecondaryHero {
 }
 
 const SECONDARY_HEROES: SecondaryHero[] = [
-  { id: 'umpire', emoji: '🧤', title: '심판 게임', sub: '볼인지 스트라이크인지\n당신이 판정해보세요', href: '/umpire-game' },
+  {
+    id: 'umpire',
+    emoji: '🧤',
+    title: '심판 게임',
+    sub: '볼인지 스트라이크인지\n당신이 판정해보세요',
+    href: '/umpire-game',
+  },
   { id: 'mbti', emoji: '🧬', title: '야구 MBTI', sub: '나는 어떤\n야구팬일까?', href: '/mbti' },
 ];
 
@@ -185,15 +201,13 @@ const SecondaryCard: FC<{ item: SecondaryHero; delay: number }> = ({ item, delay
   <Link
     to={item.href}
     viewTransition
-    className="animate-reveal-up group block overflow-hidden rounded-2xl bg-card transition-all duration-200 active:scale-[0.97]"
+    className="animate-reveal-up group bg-card block overflow-hidden rounded-2xl transition-all duration-200 active:scale-[0.97]"
     style={{ animationDelay: `${delay}ms` }}
   >
     <div className="px-4 pt-4 pb-4">
       <span className="text-[24px] leading-none">{item.emoji}</span>
-      <p className="mt-2 text-[15px] font-extrabold leading-tight tracking-tight">
-        {item.title}
-      </p>
-      <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-muted-foreground">
+      <p className="mt-2 text-[15px] leading-tight font-extrabold tracking-tight">{item.title}</p>
+      <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed whitespace-pre-line">
         {item.sub}
       </p>
     </div>
@@ -237,13 +251,13 @@ const MoreCard: FC<{ item: MoreItem; delay: number }> = ({ item, delay }) => {
     <div className="flex items-center gap-3 p-3.5">
       <span className="text-[20px]">{item.icon}</span>
       <div className="min-w-0 flex-1">
-        <p className="text-[14px] font-bold leading-tight">{item.title}</p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">{item.sub}</p>
+        <p className="text-[14px] leading-tight font-bold">{item.title}</p>
+        <p className="text-muted-foreground mt-0.5 text-[11px]">{item.sub}</p>
       </div>
       {item.available ? (
-        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50" />
+        <ChevronRight className="text-muted-foreground/50 h-4 w-4 shrink-0" />
       ) : (
-        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+        <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 text-[10px]">
           {item.badge}
         </span>
       )}
@@ -255,7 +269,7 @@ const MoreCard: FC<{ item: MoreItem; delay: number }> = ({ item, delay }) => {
       <Link
         to={item.href}
         viewTransition
-        className="animate-reveal-up block rounded-2xl bg-card transition-all duration-200 hover:bg-card/80 active:scale-[0.98]"
+        className="animate-reveal-up bg-card hover:bg-card/80 block rounded-2xl transition-all duration-200 active:scale-[0.98]"
         style={{ animationDelay: `${delay}ms` }}
       >
         {inner}
@@ -265,13 +279,37 @@ const MoreCard: FC<{ item: MoreItem; delay: number }> = ({ item, delay }) => {
 
   return (
     <div
-      className="animate-reveal-up rounded-2xl bg-card/50 opacity-45"
+      className="animate-reveal-up bg-card/50 rounded-2xl opacity-45"
       style={{ animationDelay: `${delay}ms` }}
     >
       {inner}
     </div>
   );
 };
+
+const FooterLinks: FC = () => (
+  <footer className="text-muted-foreground/45 mt-12 flex items-center justify-center gap-2 pb-2 text-[10px]">
+    <span>
+      made by{' '}
+      <a
+        href="https://github.com/naco0406"
+        target="_blank"
+        rel="noreferrer"
+        className="hover:text-muted-foreground underline-offset-4 transition-colors hover:underline"
+      >
+        naco
+      </a>
+    </span>
+    <span aria-hidden="true">·</span>
+    <Link
+      to="/design-system"
+      viewTransition
+      className="hover:text-muted-foreground underline-offset-4 transition-colors hover:underline"
+    >
+      design system
+    </Link>
+  </footer>
+);
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -313,10 +351,7 @@ export const LandingPage: FC = () => {
     onRefresh: handleRefresh,
   });
 
-  const sortedGames = useMemo(
-    () => sortGamesByTeam(games, teamCode),
-    [games, teamCode],
-  );
+  const sortedGames = useMemo(() => sortGamesByTeam(games, teamCode), [games, teamCode]);
 
   // 컨텍스트 라인: 팀 있으면 경기 한 줄, 없으면 null (CTA로 대체)
   const contextMessage = useMemo(() => {
@@ -338,9 +373,11 @@ export const LandingPage: FC = () => {
   return (
     <div className="flex min-h-dvh flex-col">
       {/* ── Header ── */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl">
+      <header className="bg-background/80 sticky top-0 z-50 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-md items-center justify-between px-5">
-          <span className="font-score text-[28px] leading-none tracking-widest opacity-80">643</span>
+          <span className="font-score text-[28px] leading-none tracking-widest opacity-80">
+            643
+          </span>
           <Link
             to="/profile"
             viewTransition
@@ -350,11 +387,11 @@ export const LandingPage: FC = () => {
               <img
                 src={profile.avatarUrl}
                 alt="프로필"
-                className="h-8 w-8 rounded-full object-cover ring-2 ring-border"
+                className="ring-border h-8 w-8 rounded-full object-cover ring-2"
               />
             ) : (
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                <User className="h-4 w-4 text-muted-foreground/60" />
+              <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-full">
+                <User className="text-muted-foreground/60 h-4 w-4" />
               </div>
             )}
           </Link>
@@ -365,7 +402,6 @@ export const LandingPage: FC = () => {
 
       {/* ── Content ── */}
       <main className="mx-auto w-full max-w-md flex-1 px-5 pb-16">
-
         {/* ── Pull-to-refresh ── */}
         <PullToRefreshIndicator
           phase={phase}
@@ -375,14 +411,14 @@ export const LandingPage: FC = () => {
         />
 
         {/* ── Context line ── */}
-        <div className="mt-4 mb-6 animate-reveal-up">
+        <div className="animate-reveal-up mt-4 mb-6">
           {contextMessage && !loading ? (
-            <p className="text-[15px] font-medium text-muted-foreground">{contextMessage}</p>
+            <p className="text-muted-foreground text-[15px] font-medium">{contextMessage}</p>
           ) : !teamCode ? (
             <Link
               to="/profile"
               viewTransition
-              className="inline-flex items-center gap-1 text-[14px] font-semibold text-accent transition-colors hover:text-accent/80"
+              className="text-accent hover:text-accent/80 inline-flex items-center gap-1 text-[14px] font-semibold transition-colors"
             >
               응원하는 팀을 설정해보세요
               <ChevronRight className="h-4 w-4" />
@@ -405,11 +441,11 @@ export const LandingPage: FC = () => {
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-[17px] font-extrabold tracking-tight">오늘의 경기</h2>
-              {loading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+              {loading && <Loader2 className="text-muted-foreground h-3 w-3 animate-spin" />}
             </div>
             <Link
               to="/schedule"
-              className="flex items-center gap-0.5 rounded-full bg-muted/60 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-all hover:bg-muted active:scale-95"
+              className="bg-muted/60 text-muted-foreground hover:bg-muted flex items-center gap-0.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all active:scale-95"
             >
               {dateLabel}
               <ChevronRight className="h-3 w-3" />
@@ -429,7 +465,7 @@ export const LandingPage: FC = () => {
                   delay={i * 40}
                   isMyTeam={isMyTeamGame(game, teamCode)}
                   onClick={
-                    (game.status === 'completed' || game.status === 'live')
+                    game.status === 'completed' || game.status === 'live'
                       ? () => setDetailGame(game)
                       : undefined
                   }
@@ -440,10 +476,7 @@ export const LandingPage: FC = () => {
         </section>
 
         {/* ── Ad ── */}
-        <AdContainer
-          type={AD_SLOTS.home.type}
-          unitId={AD_SLOTS.home.unitId}
-        />
+        <AdContainer type={AD_SLOTS.home.type} unitId={AD_SLOTS.home.unitId} />
 
         {/* ── 더 즐기기 ── */}
         <section className="mt-4">
@@ -454,6 +487,8 @@ export const LandingPage: FC = () => {
             ))}
           </div>
         </section>
+
+        <FooterLinks />
       </main>
     </div>
   );
